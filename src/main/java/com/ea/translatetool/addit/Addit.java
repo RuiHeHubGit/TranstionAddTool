@@ -1,5 +1,6 @@
 package com.ea.translatetool.addit;
 
+import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 

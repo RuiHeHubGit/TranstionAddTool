@@ -1,6 +1,6 @@
 package com.ea.translatetool.config;
 
-import com.ea.translatetool.addit.Translate;
+import com.ea.translatetool.addit.mode.Translate;
 
 import java.io.File;
 import java.util.List;

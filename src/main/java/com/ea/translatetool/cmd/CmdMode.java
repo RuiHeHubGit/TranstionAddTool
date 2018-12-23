@@ -2,7 +2,7 @@ package com.ea.translatetool.cmd;
 
 import com.ea.translatetool.App;
 import com.ea.translatetool.addit.Addit;
-import com.ea.translatetool.addit.Translate;
+import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;

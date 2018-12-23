@@ -102,7 +102,7 @@ public class WindowsTool {
             InputStream inputStream = null;
             FileOutputStream outputStream = null;
             try {
-                inputStream = WindowsTool.class.getClassLoader().getResourceAsStream("jni/lib/WindowsTool.dll");
+                inputStream = WindowsTool.class.getClassLoader().getResourceAsStream("lib/WindowsTool.dll");
                 outputStream = new FileOutputStream(deskDll);
                 byte[] bytes = new byte[1024];
                 int size;
