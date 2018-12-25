@@ -1,39 +1,72 @@
 package com.ea.translatetool.addit;
 
 import com.ea.translatetool.addit.mode.Translate;
+import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
+import com.ea.translatetool.util.ExcelUtil;
+import com.ea.translatetool.util.IOUitl;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.util.*;
 
 public class Addit {
+    private volatile static boolean running;
+    private static Addit  addit;
     WorkConfig workConfig;
     private List<Translate> translateList;
     private List<File> sourceFiles;
-    private volatile static boolean running;
+    private int stage;
+    private int stageCount;
+    private int mode;
 
-    public static boolean isRunning() {
-        return running;
+    private Addit() {
+        translateList = new ArrayList<>();
+        sourceFiles = new ArrayList<>();
     }
 
-    public static void start(WorkConfig workConfig, WorkCallback callback) {
-        Addit addit = new Addit();
-        addit.init(workConfig);
+    public synchronized static Addit getInstance() {
+        if(addit == null) {
+            addit = new Addit();
+        }
+        return addit;
+    }
+
+    public static void start(WorkConfig workConfig, int mode, WorkCallback callback) {
+        Addit addit = getInstance();
+        addit.mergeNewAddTranslate(workConfig);
+        addit.mode = mode;
+        if(mode == 0) {
+            addit.stage = 1;
+            addit.stageCount = 3;
+            addit.loadTranslateFiles(workConfig, callback);
+            addit.stage = 2;
+            addit.loadAllTranslate(workConfig, callback);
+        } else if(mode == 2) {
+            addit.stage = 1;
+            addit.stageCount = 2;
+            addit.loadAllTranslate(workConfig, callback);
+        } else {
+            addit.stage = 1;
+            addit.stageCount = 1;
+        }
+
+        addit.stage = addit.stageCount;
         addit.doWork(workConfig, callback);
     }
 
     private void doWork(WorkConfig workConfig, WorkCallback callback) {
         running = true;
+        WorkStage workStage =new WorkStage(mode, stage, stageCount, 3, "test", "", new Date(), null);
         if(callback != null) {
-            callback.onStart();
+            callback.onStart(workStage);
         }
         // TODO: 2018/12/23
         // test start
-        for (int i=0; i<=100; ++i) {
+        int total = 300;
+        for (int i=0; i<=total; ++i) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -42,17 +75,18 @@ public class Addit {
                 return;
             }
             if(callback != null) {
-                callback.onProgress(i, 100);
+                callback.onProgress(i, total);
             }
         }
         // test end
         running = false;
         if(callback != null) {
-            callback.onDone();
+            workStage.setEnd(new Date());
+            callback.onDone(workStage);
         }
     }
 
-    private void init(WorkConfig workConfig) {
+    private void mergeNewAddTranslate(WorkConfig workConfig) {
         this.workConfig = workConfig;
         translateList = new ArrayList<>();
         List<Translate> list =  workConfig.getTranslateList();
@@ -65,14 +99,66 @@ public class Addit {
                 }
             }
         }
-
-        loadTranslateFromExcel(workConfig);
     }
 
-    private void loadTranslateFromExcel(WorkConfig workConfig) {
-
+    public List<File> loadTranslateFiles(WorkConfig workConfig, WorkCallback callback) {
+        List<File> inputPathList = workConfig.getInput();
+        WorkStage workStage =  new WorkStage(mode, stage, stageCount, 3, "load files", "", new Date(), null);
+        if(callback != null) {
+            callback.onStart(workStage);
+        }
+        if(sourceFiles == null) {
+            sourceFiles = new ArrayList<>();
+        }
+        for (final File file : inputPathList) {
+            List<File> files =  IOUitl.fileList(file, false, new DirectoryStream.Filter<File>() {
+                @Override
+                public boolean accept(File entry) throws IOException {
+                    if(entry.isFile()
+                            && (entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
+                                    || entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX))) {
+                        return true;
+                    }
+                    return false;
+                }
+            });
+            sourceFiles.addAll(files);
+        }
+        if(callback != null) {
+            workStage.setEnd(new Date());
+            callback.onDone(workStage);
+        }
+        return sourceFiles;
     }
 
+    private void loadAllTranslate(WorkConfig workConfig, WorkCallback callback) {
+        WorkStage workStage = new WorkStage(mode, stage, stageCount, 3, "load translate", "", new Date(), null);
+        if(callback != null) {
+            callback.onStart(workStage);
+        }
+        for (int i=0; i<sourceFiles.size(); ++i) {
+            try {
+                parseTranslateFile(workConfig, sourceFiles.get(i));
+            } catch (Exception e) {
+                if(callback != null) {
+                    callback.onError(e);
+                }
+            }
+
+            if(callback != null) {
+                callback.onProgress(i, sourceFiles.size());
+            }
+        }
+
+        if(callback != null) {
+            workStage.setEnd(new Date());
+            callback.onDone(workStage);
+        }
+    }
+
+    private void parseTranslateFile(WorkConfig workConfig, File file) {
+        // TODO: 2018/12/24
+    }
 
     public static WorkConfig getDefaultWorkConfig() {
         WorkConfig workConfig = new WorkConfig();
@@ -88,6 +174,22 @@ public class Addit {
         workConfig.setKeyColumn(0);
         workConfig.setLocalColumn(1);
         workConfig.setTranslateColumn(2);
+        return workConfig;
+    }
+
+    public static boolean isRunning() {
+        return running;
+    }
+
+    public List<File> getSourceFiles() {
+        return sourceFiles;
+    }
+
+    public List<Translate> getTranslateList() {
+        return translateList;
+    }
+
+    public WorkConfig getWorkConfig() {
         return workConfig;
     }
 }

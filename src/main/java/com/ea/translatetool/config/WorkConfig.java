@@ -1,8 +1,10 @@
 package com.ea.translatetool.config;
 
+import com.ea.translatetool.addit.mode.ColumnPosition;
 import com.ea.translatetool.addit.mode.Translate;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -14,11 +16,12 @@ public class WorkConfig {
     private List<File> input;
     private File output;
     private String outType;
-    private boolean vertical;
-    private int keyColumn;
-    private int localColumn;
-    private int translateColumn;
+    private Boolean vertical;
+    private Integer keyColumn;
+    private Integer localColumn;
+    private Integer translateColumn;
     private List<Translate> translateList;
+    private HashMap<String, ColumnPosition> columnPositionMap;
 
     public String getFilePrefix() {
         return filePrefix;
@@ -60,35 +63,35 @@ public class WorkConfig {
         this.outType = outType;
     }
 
-    public boolean isVertical() {
+    public Boolean getVertical() {
         return vertical;
     }
 
-    public void setVertical(boolean vertical) {
+    public void setVertical(Boolean vertical) {
         this.vertical = vertical;
     }
 
-    public int getKeyColumn() {
+    public Integer getKeyColumn() {
         return keyColumn;
     }
 
-    public void setKeyColumn(int keyColumn) {
+    public void setKeyColumn(Integer keyColumn) {
         this.keyColumn = keyColumn;
     }
 
-    public int getLocalColumn() {
+    public Integer getLocalColumn() {
         return localColumn;
     }
 
-    public void setLocalColumn(int localColumn) {
+    public void setLocalColumn(Integer localColumn) {
         this.localColumn = localColumn;
     }
 
-    public int getTranslateColumn() {
+    public Integer getTranslateColumn() {
         return translateColumn;
     }
 
-    public void setTranslateColumn(int translateColumn) {
+    public void setTranslateColumn(Integer translateColumn) {
         this.translateColumn = translateColumn;
     }
 
@@ -98,5 +101,13 @@ public class WorkConfig {
 
     public void setTranslateList(List<Translate> translateList) {
         this.translateList = translateList;
+    }
+
+    public HashMap<String, ColumnPosition> getColumnPositionMap() {
+        return columnPositionMap;
+    }
+
+    public void setColumnPositionMap(HashMap<String, ColumnPosition> columnPositionMap) {
+        this.columnPositionMap = columnPositionMap;
     }
 }

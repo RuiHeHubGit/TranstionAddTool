@@ -95,7 +95,7 @@ public class WindowsTool {
         System.out.println("load library ..");
         try {
             System.loadLibrary("WindowsTool");
-            isWindow(0);
+            getCmdHwnd();
         } catch (Throwable t) {
             File deskDll = new File("WindowsTool.dll");
             deskDll.delete();

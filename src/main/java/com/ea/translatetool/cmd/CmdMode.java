@@ -4,6 +4,7 @@ import com.ea.translatetool.App;
 import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.WorkCallback;
+import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.util.ShutdownHandler;
@@ -34,6 +35,52 @@ public class CmdMode {
         addShutdownHandler();
     }
 
+    public synchronized static void start(App app, String[] args) {
+        if(cmdMode == null) {
+            cmdMode = new CmdMode(app);
+            cmdMode.definedOptions();
+            try {
+                WorkConfig config = cmdMode.parseOptions(args, Addit.getDefaultWorkConfig(), 1);
+                if(config != null) {
+                    cmdMode.doStart(config);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void doStart(WorkConfig config) {
+        Addit.start(config, 0, new WorkCallback() {
+
+            @Override
+            public void onStart(WorkStage stage) {
+                System.out.println(WindowsTool.getInstance().getCmdHwnd());
+                WindowsTool.getInstance().enableWindowSystemMenu(WindowsTool.SC_CLOSE, false);
+                if(stage.getIndex() == 1) {
+                    System.out.println("start ..");
+                }
+                System.out.println(stage.getName());
+            }
+
+            @Override
+            public void onProgress(long complete, long total) {
+                showProgress(complete, total, 50);
+            }
+
+            @Override
+            public void onDone(WorkStage stage) {
+                System.out.println("\n"+stage.getName()+" finished.");
+                WindowsTool.getInstance().enableWindowSystemMenu(WindowsTool.SC_CLOSE, true);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+
+            }
+        });
+    }
+
     private void addShutdownHandler() {
         // 异常终止处
         ShutdownHandler.addShutdownHandler(new ShutdownHandler() {
@@ -60,21 +107,6 @@ public class CmdMode {
     void exit(int status) {
         this.exitStatus = status;
         System.exit(status);
-    }
-
-    public synchronized static void start(App app, String[] args) {
-        if(cmdMode == null) {
-            cmdMode = new CmdMode(app);
-            cmdMode.definedOptions();
-            try {
-                WorkConfig config = cmdMode.parseOptions(args, Addit.getDefaultWorkConfig(), 1);
-                if(config != null) {
-                    cmdMode.doStart(config);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     // 定义命令行参数
@@ -343,41 +375,6 @@ public class CmdMode {
         }
     }
 
-    private void doStart(WorkConfig config) {
-        final String clearLine = createStringFromString("\b", 60);
-        Addit.start(config, new WorkCallback() {
-
-            @Override
-            public void onStart() {
-                System.out.println(WindowsTool.getInstance().getCmdHwnd());
-                WindowsTool.getInstance().enableWindowSystemMenu(WindowsTool.SC_CLOSE, false);
-                System.out.println("start ..");
-            }
-
-            @Override
-            public void onProgress(long complete, long total) {
-                float p = 1.0f * complete / total;
-                int c = (int)(50 * p);
-                int s = 50-c;
-                System.out.print(clearLine);
-                System.out.print(createStringFromString(">", c));
-                System.out.print(createStringFromString("_", s));
-                System.out.printf(" [%.2f%%]", p*100);
-            }
-
-            @Override
-            public void onDone() {
-                System.out.println("\nfinished.");
-                WindowsTool.getInstance().enableWindowSystemMenu(WindowsTool.SC_CLOSE, true);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-
-            }
-        });
-    }
-
     private void printInputModeHelp() {
         System.out.println("add <key,local,translate>; add translate.");
         System.out.println("clear                      clear the screen.");
@@ -396,7 +393,10 @@ public class CmdMode {
         System.out.println("vt [true|false];           set vertical. empty value same true");
     }
 
-    private String createStringFromString(String s, int length) {
+    public static String createStringFromString(String s, int length) {
+        if(length <= 0 || s == null ||  s.isEmpty()) {
+            return "";
+        }
         StringBuilder stringBuilder = new StringBuilder(s);
         while (stringBuilder.length() < length) {
             stringBuilder.append(s);
@@ -405,5 +405,15 @@ public class CmdMode {
             return stringBuilder.toString();
         }
         return stringBuilder.substring(0, length);
+    }
+
+    public static void showProgress(long complete, long total, int psWidth) {
+        float p = 1.0f * complete / total;
+        int c = (int)(psWidth * p);
+        int s = psWidth-c;
+        System.out.print(createStringFromString("\b", psWidth + 10));
+        System.out.print(createStringFromString(">", c));
+        System.out.print(createStringFromString("_", s));
+        System.out.printf(" [%.2f%%]", p*100);
     }
 }

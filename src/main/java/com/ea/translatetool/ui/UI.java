@@ -3,6 +3,8 @@ package com.ea.translatetool.ui;
 import com.ea.translatetool.App;
 import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.WorkCallback;
+import com.ea.translatetool.addit.mode.WorkStage;
+import com.ea.translatetool.cmd.CmdMode;
 import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowsTool;
 
@@ -19,40 +21,42 @@ public class UI extends JFrame {
         this.app = app;
     }
 
-    private void addShutdownHandler() {
-        // 异常终止处
-        ShutdownHandler.addShutdownHandler(new ShutdownHandler() {
-            @Override
-            public void run() {
-                if(Addit.isRunning()) {
-                    WindowsTool.getInstance().setCmdShow(true);
-                    System.out.println("WARNING:Terminating now will cause the task to fail," +
-                            "\napp will wait for the task to complete!");
-                }
-                while (Addit.isRunning()) {
-                    try {
-                        sleep(100);
-                    } catch (InterruptedException e) {}
-                }
-                if(exitStatus != 0) {
-                    WindowsTool.getInstance().setCmdShow(true);
-                    System.err.println("abnormal termination.");
-                }
-            }
-        });
-    }
-
-    void exit(int status) {
-        this.exitStatus = status;
-        this.dispose();
-        System.exit(status);
-    }
-
     public synchronized static void startUI(App app) {
         if(ui == null) {
             init(app);
         }
         ui.setVisible(true);
+
+        // test
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Addit.start(Addit.getDefaultWorkConfig(), 0, new WorkCallback() {
+
+                    @Override
+                    public void onStart(WorkStage stage) {
+
+                    }
+
+                    @Override
+                    public void onProgress(long complete, long total) {
+                        if(!ui.isVisible()) {
+                            CmdMode.showProgress(complete, total, 50);
+                        }
+                    }
+
+                    @Override
+                    public void onDone(WorkStage stage) {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        WindowsTool.getInstance().setCmdShow(true);
+                    }
+                });
+            }
+        }).start();
     }
 
     private static void init(App app) {
@@ -68,6 +72,7 @@ public class UI extends JFrame {
     private void initUI() {
         initTheme();
         setTitle("translate tool");
+        setIconImage(this.getToolkit().getImage(getClass().getClassLoader().getResource("tools_72px.ico")));
         setSize(800, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -109,5 +114,37 @@ public class UI extends JFrame {
         } catch (UnsupportedLookAndFeelException e) {
             e.printStackTrace();
         }
+    }
+
+    private void addShutdownHandler() {
+        // 异常终止处
+        ShutdownHandler.addShutdownHandler(new ShutdownHandler() {
+            @Override
+            public void run() {
+                if(Addit.isRunning()) {
+                    WindowsTool.getInstance().setCmdShow(true);
+                    System.out.println("WARNING:Terminating now will cause the task to fail," +
+                            "\napp will wait for the task to complete!");
+                }
+                while (Addit.isRunning()) {
+                    try {
+                        sleep(100);
+                    } catch (InterruptedException e) {}
+                }
+                if(exitStatus != 0) {
+                    WindowsTool.getInstance().setCmdShow(true);
+                    System.err.println("abnormal termination.");
+                    try {
+                        sleep(3000);
+                    } catch (InterruptedException e) {}
+                }
+            }
+        });
+    }
+
+    void exit(int status) {
+        this.exitStatus = status;
+        this.dispose();
+        System.exit(status);
     }
 }
