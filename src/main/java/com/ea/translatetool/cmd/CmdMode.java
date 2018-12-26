@@ -8,7 +8,7 @@ import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.util.ShutdownHandler;
-import com.ea.translatetool.util.WindowsTool;
+import com.ea.translatetool.util.WindowTool;
 import org.apache.commons.cli.*;
 
 import java.io.BufferedReader;
@@ -55,8 +55,8 @@ public class CmdMode {
 
             @Override
             public void onStart(WorkStage stage) {
-                System.out.println(WindowsTool.getInstance().getCmdHwnd());
-                WindowsTool.getInstance().enableWindowSystemMenu(WindowsTool.SC_CLOSE, false);
+                System.out.println(com.ea.translatetool.util.WindowTool.getInstance().getCmdHwnd());
+                com.ea.translatetool.util.WindowTool.getInstance().enableSystemMenu(com.ea.translatetool.util.WindowTool.SC_CLOSE, false);
                 if(stage.getIndex() == 1) {
                     System.out.println("start ..");
                 }
@@ -71,7 +71,7 @@ public class CmdMode {
             @Override
             public void onDone(WorkStage stage) {
                 System.out.println("\n"+stage.getName()+" finished.");
-                WindowsTool.getInstance().enableWindowSystemMenu(WindowsTool.SC_CLOSE, true);
+                WindowTool.getInstance().enableSystemMenu(com.ea.translatetool.util.WindowTool.SC_CLOSE, true);
             }
 
             @Override
@@ -212,9 +212,9 @@ public class CmdMode {
             if (columns.length != 3) {
                 throw new IllegalArgumentException("The -cs or -columns option must is 3 number and separator sign of ','.");
             }
-            for (String f : columns) {
-                System.out.println(f);
-            }
+            config.setKeyColumn(Integer.parseInt(columns[0]));
+            config.setLocalColumn(Integer.parseInt(columns[1]));
+            config.setTranslateColumn(Integer.parseInt(columns[2]));
         }
 
         if (line.hasOption("kc")) {

@@ -6,7 +6,7 @@ import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
 import com.ea.translatetool.util.ShutdownHandler;
-import com.ea.translatetool.util.WindowsTool;
+import com.ea.translatetool.util.WindowTool;
 
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
@@ -52,7 +52,7 @@ public class UI extends JFrame {
 
                     @Override
                     public void onError(Throwable t) {
-                        WindowsTool.getInstance().setCmdShow(true);
+                        com.ea.translatetool.util.WindowTool.getInstance().setCmdShow(true);
                     }
                 });
             }
@@ -60,10 +60,10 @@ public class UI extends JFrame {
     }
 
     private static void init(App app) {
-        WindowsTool windowsTool = WindowsTool.getInstance();
-        windowsTool.setWindowText(windowsTool.getCmdHwnd(), "translate tool cmd");
-        windowsTool.enableWindowSystemMenu(WindowsTool.SC_CLOSE, false);
-        windowsTool.setCmdShow(false);
+        WindowTool windowTool = com.ea.translatetool.util.WindowTool.getInstance();
+        windowTool.setWindowText(windowTool.getCmdHwnd(), "translate tool cmd");
+        windowTool.enableSystemMenu(WindowTool.SC_CLOSE, false);
+        windowTool.setCmdShow(false);
         ui = new UI(app);
         ui.initUI();
         ui.addShutdownHandler();
@@ -122,7 +122,7 @@ public class UI extends JFrame {
             @Override
             public void run() {
                 if(Addit.isRunning()) {
-                    WindowsTool.getInstance().setCmdShow(true);
+                    WindowTool.getInstance().setCmdShow(true);
                     System.out.println("WARNING:Terminating now will cause the task to fail," +
                             "\napp will wait for the task to complete!");
                 }
@@ -132,7 +132,7 @@ public class UI extends JFrame {
                     } catch (InterruptedException e) {}
                 }
                 if(exitStatus != 0) {
-                    WindowsTool.getInstance().setCmdShow(true);
+                    com.ea.translatetool.util.WindowTool.getInstance().setCmdShow(true);
                     System.err.println("abnormal termination.");
                     try {
                         sleep(3000);

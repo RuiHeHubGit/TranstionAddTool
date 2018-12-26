@@ -5,7 +5,7 @@ import com.ea.translatetool.config.AppConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
 import com.ea.translatetool.util.PID;
-import com.ea.translatetool.util.WindowsTool;
+import com.ea.translatetool.util.WindowTool;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -15,7 +15,7 @@ import java.util.Set;
 public class App {
     private AppConfig appConfig;
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         App app = new App();
         try {
             app.loadAppConfig();
@@ -23,9 +23,11 @@ public class App {
             app.start(args);
         } catch (Throwable t) {
             t.printStackTrace();
-            WindowsTool.getInstance().setCmdShow(true);
-            t.printStackTrace();
-            Thread.sleep(60_000);
+            try {
+                WindowTool windowTool = WindowTool.getInstance();
+                windowTool.enableSystemMenu(WindowTool.SC_CLOSE, true);
+                Thread.sleep(100_000);
+            } catch (Exception e) {}
         }
     }
 
@@ -127,12 +129,11 @@ public class App {
     }
 
     private void test() {
-       /* try {
-            Workbook workbook = ExcelUtil.getWorkbook(new File("C:\\Users\\ruihe\\Desktop\\translation\\translation\\ro.lb.purchasefee_cyclefee_month_details.xlsx"));
-            List<List<String>> data = ExcelUtil.getExcelString(workbook, 0, 0, 0);
-            System.out.println(data);
-        } catch (IOException e) {
+       try {
+           WindowTool windowTool = WindowTool.getInstance();
+           windowTool.isWindow(0);
+        } catch (Exception e) {
             e.printStackTrace();
-        }*/
+        }
     }
 }
