@@ -172,9 +172,8 @@ public class Addit {
         workConfig.setOutput(new File(GlobalConstant.AppConfigDefaultValue.OUT_PATH));
         workConfig.setOutType(GlobalConstant.OutType.TYPE_JSON.getValue());
         workConfig.setVertical(false);
-        workConfig.setKeyColumn(0);
-        workConfig.setLocalColumn(1);
-        workConfig.setTranslateColumn(2);
+        workConfig.setFilePrefix("");
+        workConfig.setFileSuffix("");
 
         return workConfig;
     }

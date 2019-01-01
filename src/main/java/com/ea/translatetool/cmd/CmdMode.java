@@ -36,6 +36,8 @@ public class CmdMode {
         addShutdownHandler();
         workConfig = Addit.getDefaultWorkConfig();
         workConfig.setLocalMap(app.loadLocalMap(app.getAppConfig().getLocalMapFilePath()));
+        workConfig.setFilePrefix(app.getAppConfig().getFilePrefix());
+        workConfig.setFileSuffix(app.getAppConfig().getFileSuffix());
     }
 
     public synchronized static void start(App app, String[] args) {

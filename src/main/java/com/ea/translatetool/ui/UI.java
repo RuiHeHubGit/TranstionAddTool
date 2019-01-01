@@ -72,6 +72,8 @@ public class UI extends JFrame {
         ui.addShutdownHandler();
         ui.workConfig = Addit.getDefaultWorkConfig();
         ui.workConfig.setLocalMap(app.loadLocalMap(app.getAppConfig().getLocalMapFilePath()));
+        ui.workConfig.setFilePrefix(app.getAppConfig().getFilePrefix());
+        ui.workConfig.setFileSuffix(app.getAppConfig().getFileSuffix());
     }
 
     private void initUI() {
