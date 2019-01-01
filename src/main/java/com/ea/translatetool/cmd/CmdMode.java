@@ -2,8 +2,8 @@ package com.ea.translatetool.cmd;
 
 import com.ea.translatetool.App;
 import com.ea.translatetool.addit.Addit;
-import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.WorkCallback;
+import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
@@ -26,6 +26,7 @@ public class CmdMode {
     private static CmdMode cmdMode;
     private Options opts = new Options();
     private List<Translate> translates;
+    private WorkConfig workConfig;
     private int exitStatus;
 
     private CmdMode(App app) {
@@ -33,6 +34,8 @@ public class CmdMode {
         translates = new ArrayList<Translate>();
         exitStatus = 1;
         addShutdownHandler();
+        workConfig = Addit.getDefaultWorkConfig();
+        workConfig.setLocalMap(app.loadLocalMap(app.getAppConfig().getLocalMapFilePath()));
     }
 
     public synchronized static void start(App app, String[] args) {
@@ -40,9 +43,9 @@ public class CmdMode {
             cmdMode = new CmdMode(app);
             cmdMode.definedOptions();
             try {
-                WorkConfig config = cmdMode.parseOptions(args, Addit.getDefaultWorkConfig(), 1);
-                if(config != null) {
-                    cmdMode.doStart(config);
+                cmdMode.workConfig = cmdMode.parseOptions(args, Addit.getDefaultWorkConfig(), 1);
+                if(cmdMode.workConfig != null) {
+                    cmdMode.doStart(cmdMode.workConfig);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -55,8 +58,7 @@ public class CmdMode {
 
             @Override
             public void onStart(WorkStage stage) {
-                System.out.println(com.ea.translatetool.util.WindowTool.getInstance().getCmdHwnd());
-                com.ea.translatetool.util.WindowTool.getInstance().enableSystemMenu(com.ea.translatetool.util.WindowTool.SC_CLOSE, false);
+                WindowTool.getInstance().enableSystemMenu(com.ea.translatetool.util.WindowTool.SC_CLOSE, false);
                 if(stage.getIndex() == 1) {
                     System.out.println("start ..");
                 }
@@ -71,12 +73,12 @@ public class CmdMode {
             @Override
             public void onDone(WorkStage stage) {
                 System.out.println("\n"+stage.getName()+" finished.");
-                WindowTool.getInstance().enableSystemMenu(com.ea.translatetool.util.WindowTool.SC_CLOSE, true);
+                WindowTool.getInstance().enableSystemMenu(WindowTool.SC_CLOSE, true);
             }
 
             @Override
-            public void onError(Throwable t) {
-
+            public boolean onError(Throwable t) {
+                return true;
             }
         });
     }

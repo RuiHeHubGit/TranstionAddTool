@@ -4,6 +4,7 @@ import com.ea.translatetool.constant.GlobalConstant;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -11,6 +12,7 @@ import java.util.Set;
  * Created by HeRui on 2019/1/1.
  */
 public class FileConfigRepositoryImpl implements ConfigRepository {
+    public final static String CONFIG_FILE_PATH_KEY = "configFilePath";
     private static FileConfigRepositoryImpl fileConfigRepository;
 
     private FileConfigRepositoryImpl() {}
@@ -23,7 +25,7 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
     }
 
     @Override
-    public synchronized  <T> T load(Class<T> tClass) {
+    public synchronized  <T> T load(Class<T> tClass, Properties pro) {
         T config = null;
         try {
             config = tClass.newInstance();
@@ -40,7 +42,7 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                 appConfig.setLogLevel(GlobalConstant.AppConfigDefaultValue.LOG_LEVEL);
             }
 
-            File configFile = new File(GlobalConstant.CONFIG_FILE_PATH);
+            File configFile = new File((String) pro.get(CONFIG_FILE_PATH_KEY));
             int count = 0;
             Field[] fields = AppConfig.class.getDeclaredFields();
             if(configFile.exists() && configFile.isFile()) {
@@ -48,30 +50,38 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                 properties.load(new InputStreamReader(new FileInputStream(configFile)));
                 Set<Object> keySet = properties.keySet();
                 if(keySet.size() > 0) {
-                    for (Object key : keySet) {
-                        for (Field f : fields) {
-                            if(f.getName().equalsIgnoreCase(key.toString())) {
-                                String value = (String) properties.get(key);
-                                if(value != null && !value.isEmpty()) {
-                                    f.setAccessible(true);
-                                    try {
-                                        if (boolean.class.isAssignableFrom(f.getType())) {
-                                            f.set(config, Boolean.parseBoolean(value));
-                                        } else if(String.class.isAssignableFrom(f.getType())){
-                                            f.set(config, value);
-                                        } else if(String.class.isAssignableFrom(f.getType())){
-                                            f.set(config, value.split(","));
+                    if(Map.class.isAssignableFrom(tClass)) {
+                        Map mapConfig = (Map) config;
+                        for (Object key : keySet) {
+                            mapConfig.put(key, properties.get(key));
+                        }
+                    } else {
+                        for (Object key : keySet) {
+                            for (Field f : fields) {
+                                if (f.getName().equalsIgnoreCase(key.toString())) {
+                                    String value = (String) properties.get(key);
+                                    if (value != null && !value.isEmpty()) {
+                                        f.setAccessible(true);
+                                        try {
+                                            if (boolean.class.isAssignableFrom(f.getType())) {
+                                                f.set(config, Boolean.parseBoolean(value));
+                                            } else if (String.class.isAssignableFrom(f.getType())) {
+                                                f.set(config, value);
+                                            } else if (String.class.isAssignableFrom(f.getType())) {
+                                                f.set(config, value.split(","));
+                                            }
+                                            ++count;
+                                        } catch (Exception e) {
                                         }
-                                        ++count;
-                                    } catch (Exception e) {}
+                                    }
                                 }
                             }
                         }
+                        if(count < fields.length) {
+                            storage(config, pro);
+                        }
                     }
                 }
-            }
-            if(count < fields.length) {
-                storage(config);
             }
 
         } catch (InstantiationException e) {
@@ -85,8 +95,8 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
     }
 
     @Override
-    public synchronized <T> boolean storage(T t) {
-        File saveFile = new File(GlobalConstant.CONFIG_FILE_PATH);
+    public synchronized <T> boolean storage(T t, Properties pro) {
+        File saveFile = new File((String) pro.get(CONFIG_FILE_PATH_KEY));
         if(!saveFile.exists()) {
             try {
                 saveFile.createNewFile();
@@ -95,25 +105,44 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                 return false;
             }
         }
-        Field[] fields = AppConfig.class.getDeclaredFields();
         Properties properties = new Properties();
-        for (Field f : fields) {
-            try {
-                f.setAccessible(true);
-                Object value = f.get(t);
-                String strValue;
-                if(f.getType().isArray() && ((String[]) value).length > 0) {
+        if(Map.class.isAssignableFrom(t.getClass())) {
+            Map mapConfig = (Map) t;
+            Set keySet = mapConfig.keySet();
+            for (Object key : keySet) {
+                Object value = mapConfig.get(key);
+                String strValue = "";
+                if (value != null && value.getClass().isArray() && ((String[]) value).length > 0) {
                     StringBuffer stringBuffer = new StringBuffer("");
                     for (String item : (String[]) value) {
                         stringBuffer.append(item).append(",");
                     }
-                    strValue = stringBuffer.deleteCharAt(stringBuffer.length()-1).toString();
-                } else {
+                    strValue = stringBuffer.deleteCharAt(stringBuffer.length() - 1).toString();
+                } else if(value != null){
                     strValue = value.toString();
                 }
-                properties.put(f.getName(), strValue);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
+                properties.put(key, strValue);
+            }
+        } else {
+            Field[] fields = AppConfig.class.getDeclaredFields();
+            for (Field f : fields) {
+                try {
+                    f.setAccessible(true);
+                    Object value = f.get(t);
+                    String strValue = "";
+                    if (value != null && f.getType().isArray() && ((String[]) value).length > 0) {
+                        StringBuffer stringBuffer = new StringBuffer("");
+                        for (String item : (String[]) value) {
+                            stringBuffer.append(item).append(",");
+                        }
+                        strValue = stringBuffer.deleteCharAt(stringBuffer.length() - 1).toString();
+                    } else if(value != null){
+                        strValue = value.toString();
+                    }
+                    properties.put(f.getName(), strValue);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
             }
         }
         FileWriter writer = null;

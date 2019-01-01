@@ -5,6 +5,7 @@ import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
+import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowTool;
 
@@ -15,13 +16,14 @@ import java.awt.event.WindowEvent;
 public class UI extends JFrame {
     private static UI ui;
     private final App app;
+    private WorkConfig workConfig;
     private volatile int exitStatus;
 
     private UI(App app) {
         this.app = app;
     }
 
-    public synchronized static void startUI(App app) {
+    public synchronized static void start(App app) {
         if(ui == null) {
             init(app);
         }
@@ -31,7 +33,7 @@ public class UI extends JFrame {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                Addit.start(Addit.getDefaultWorkConfig(), 0, new WorkCallback() {
+                Addit.start(ui.workConfig, 0, new WorkCallback() {
 
                     @Override
                     public void onStart(WorkStage stage) {
@@ -51,8 +53,9 @@ public class UI extends JFrame {
                     }
 
                     @Override
-                    public void onError(Throwable t) {
-                        com.ea.translatetool.util.WindowTool.getInstance().setCmdShow(true);
+                    public boolean onError(Throwable t) {
+                        WindowTool.getInstance().setCmdShow(true);
+                        return true;
                     }
                 });
             }
@@ -60,13 +63,15 @@ public class UI extends JFrame {
     }
 
     private static void init(App app) {
-        WindowTool windowTool = com.ea.translatetool.util.WindowTool.getInstance();
+        WindowTool windowTool = WindowTool.getInstance();
         windowTool.setWindowText(windowTool.getCmdHwnd(), "translate tool cmd");
         windowTool.enableSystemMenu(WindowTool.SC_CLOSE, false);
         windowTool.setCmdShow(false);
         ui = new UI(app);
         ui.initUI();
         ui.addShutdownHandler();
+        ui.workConfig = Addit.getDefaultWorkConfig();
+        ui.workConfig.setLocalMap(app.loadLocalMap(app.getAppConfig().getLocalMapFilePath()));
     }
 
     private void initUI() {
@@ -132,7 +137,7 @@ public class UI extends JFrame {
                     } catch (InterruptedException e) {}
                 }
                 if(exitStatus != 0) {
-                    com.ea.translatetool.util.WindowTool.getInstance().setCmdShow(true);
+                    WindowTool.getInstance().setCmdShow(true);
                     System.err.println("abnormal termination.");
                     try {
                         sleep(3000);

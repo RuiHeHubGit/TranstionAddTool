@@ -4,9 +4,13 @@ import com.ea.translatetool.cmd.CmdMode;
 import com.ea.translatetool.config.AppConfig;
 import com.ea.translatetool.config.ConfigRepository;
 import com.ea.translatetool.config.FileConfigRepositoryImpl;
+import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
 import com.ea.translatetool.util.PID;
 import com.ea.translatetool.util.WindowTool;
+
+import java.util.HashMap;
+import java.util.Properties;
 
 public class App {
     private AppConfig appConfig;
@@ -33,14 +37,23 @@ public class App {
         return appConfig;
     }
 
+    public HashMap<String, String> loadLocalMap(String localMapFilePath) {
+        ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
+        Properties properties = new Properties();
+        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, localMapFilePath);
+        return configRepository.load(HashMap.class, properties);
+    }
+
     private void loadAppConfig() {
         ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
-        appConfig = configRepository.load(AppConfig.class);
+        Properties properties = new Properties();
+        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, GlobalConstant.CONFIG_FILE_PATH);
+        appConfig = configRepository.load(AppConfig.class, properties);
     }
 
     private void start(String[] args) {
         if(PID.isStartWithWindowExplorer()) {
-            UI.startUI(this);
+            UI.start(this);
         } else {
             CmdMode.start(this, args);
         }

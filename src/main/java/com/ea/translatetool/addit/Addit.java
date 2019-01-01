@@ -175,6 +175,7 @@ public class Addit {
         workConfig.setKeyColumn(0);
         workConfig.setLocalColumn(1);
         workConfig.setTranslateColumn(2);
+
         return workConfig;
     }
 

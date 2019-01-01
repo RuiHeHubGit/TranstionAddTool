@@ -92,7 +92,6 @@ public class WindowTool {
      * 加载动态链接库 WindowTool.dl
      */
     public void loadLibrary(){
-        System.out.println("load library ..");
         try {
             System.loadLibrary("WindowTool");
             getCmdHwnd();
