@@ -7,6 +7,7 @@ import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
+import com.ea.translatetool.util.LoggerUtil;
 import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowTool;
 import org.apache.commons.cli.*;
@@ -50,7 +51,7 @@ public class CmdMode {
                     cmdMode.doStart(cmdMode.workConfig);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                LoggerUtil.error(e.getMessage());
             }
         }
     }
@@ -120,15 +121,6 @@ public class CmdMode {
         Option optVersion = new Option("v", "version", false,"Look version for translate addi.");
         Option optVertical = new Option("vt", "vertical", false,"Set read vertical in excel");
 
-        Option optKeyColumn = Option.builder("kc").longOpt("key-column")
-                .hasArg().argName("number").desc("Set key column in excel, default automatic recognition.").build();
-
-        Option optLocalColumn = Option.builder("lc").longOpt("local-column")
-                .hasArg().argName("number").desc("Set local column in excel, default automatic recognition.").build();
-
-        Option optTranslateColumn = Option.builder("tc").longOpt("translate-column")
-                .hasArg().argName("number").desc("Set translate column in excel, default automatic recognition.").build();
-
         Option optInput = Option.builder("i").longOpt("input")
                 .hasArgs().argName("path1,path2...").valueSeparator(',').desc("Source file of excel.").build();
 
@@ -147,9 +139,6 @@ public class CmdMode {
         opts.addOption(optInput);
         opts.addOption(optOutput);
         opts.addOption(optOutputType);
-        opts.addOption(optKeyColumn);
-        opts.addOption(optLocalColumn);
-        opts.addOption(optTranslateColumn);
         opts.addOption(optColumns);
     }
 
@@ -177,7 +166,7 @@ public class CmdMode {
                 if (line.hasOption("h")) {
                     return null;
                 } else {
-                    inInputMode(config);
+                    enterInputMode(config);
                     return null;
                 }
             }
@@ -221,37 +210,13 @@ public class CmdMode {
             config.setTranslateColumn(Integer.parseInt(columns[2]));
         }
 
-        if (line.hasOption("kc")) {
-            try {
-                config.setKeyColumn(Integer.parseInt(line.getOptionValue("kc")));
-            } catch (Exception e) {
-                throw new IllegalArgumentException("invalid key-column value on kc");
-            }
-        }
-
-        if (line.hasOption("lc")) {
-            try {
-                config.setLocalColumn(Integer.parseInt(line.getOptionValue("lc")));
-            } catch (Exception e) {
-                throw new IllegalArgumentException("invalid local-column value on kc");
-            }
-        }
-
-        if (line.hasOption("tc")) {
-            try {
-                config.setTranslateColumn(Integer.parseInt(line.getOptionValue("tc")));
-            } catch (Exception e) {
-                throw new IllegalArgumentException("invalid translate-column value on kc");
-            }
-        }
-
         if (line.hasOption("ot")) {
             String type = line.getOptionValue("ot");
             boolean findType = false;
             StringBuffer stringBuffer = new StringBuffer("[");
             for (GlobalConstant.OutType outType : GlobalConstant.OutType.values()) {
                 if(outType.getValue().endsWith(type)) {
-                    config.setOutType(type);
+                    config.setOutType(outType);
                     findType = true;
                     break;
                 }
@@ -270,7 +235,7 @@ public class CmdMode {
         return config;
     }
 
-    private void inInputMode(WorkConfig config) throws IOException, InterruptedException {
+    private void enterInputMode(WorkConfig config) throws IOException, InterruptedException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         String line;
         try {
@@ -315,7 +280,7 @@ public class CmdMode {
                 try {
                     reader.close();
                 } catch (IOException e1) {
-                    e1.printStackTrace();
+                    LoggerUtil.error(e1.getMessage());
                 }
             }
         }

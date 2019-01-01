@@ -70,13 +70,13 @@ public final class PID {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         } finally {
             if(br != null) {
                 try {
                     br.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LoggerUtil.error(e.getMessage());
                 }
             }
         }

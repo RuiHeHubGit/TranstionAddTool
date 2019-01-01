@@ -1,6 +1,7 @@
 package com.ea.translatetool.config;
 
 import com.ea.translatetool.constant.GlobalConstant;
+import com.ea.translatetool.util.LoggerUtil;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -85,11 +86,11 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
             }
 
         } catch (InstantiationException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         }
         return config;
     }
@@ -101,7 +102,7 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
             try {
                 saveFile.createNewFile();
             } catch (IOException e) {
-                e.printStackTrace();
+                LoggerUtil.error(e.getMessage());
                 return false;
             }
         }
@@ -141,7 +142,7 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                     }
                     properties.put(f.getName(), strValue);
                 } catch (IllegalAccessException e) {
-                    e.printStackTrace();
+                    LoggerUtil.error(e.getMessage());
                 }
             }
         }
@@ -150,14 +151,14 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
             writer = new FileWriter(saveFile);
             properties.store(writer, "config of tool");
         } catch (IOException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
             return false;
         } finally {
             if(writer != null) {
                 try {
                     writer.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LoggerUtil.error(e.getMessage());
                 }
             }
         }

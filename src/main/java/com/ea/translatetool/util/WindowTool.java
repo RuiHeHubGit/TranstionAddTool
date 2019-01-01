@@ -109,21 +109,21 @@ public class WindowTool {
                     outputStream.write(bytes, 0, size);
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                LoggerUtil.error(e.getMessage());
             } finally {
                 try {
                     if (inputStream != null) {
                         inputStream.close();
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LoggerUtil.error(e.getMessage());
                 } finally {
                     if (outputStream != null) {
                         try {
                             outputStream.close();
                             System.loadLibrary("WindowTool");
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            LoggerUtil.error(e.getMessage());
                         }
                     }
                 }
@@ -259,7 +259,7 @@ public class WindowTool {
                         show ? SW_SHOW : SW_HIDE);
             }
         } catch (Throwable t) {
-            t.printStackTrace();
+            LoggerUtil.error(t.getMessage());
         }
     }
 
@@ -278,7 +278,7 @@ public class WindowTool {
                 }
             }
         } catch (Throwable t) {
-            t.printStackTrace();
+            LoggerUtil.error(t.getMessage());
         }
     }
 }

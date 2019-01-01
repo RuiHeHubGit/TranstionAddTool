@@ -2,6 +2,7 @@ package com.ea.translatetool.config;
 
 import com.ea.translatetool.addit.mode.ColumnPosition;
 import com.ea.translatetool.addit.mode.Translate;
+import com.ea.translatetool.constant.GlobalConstant;
 
 import java.io.File;
 import java.util.HashMap;
@@ -15,7 +16,7 @@ public class WorkConfig {
     private String fileSuffix;
     private List<File> input;
     private File output;
-    private String outType;
+    private GlobalConstant.OutType outType;
     private Boolean vertical;
     private Integer keyColumn;
     private Integer localColumn;
@@ -56,11 +57,11 @@ public class WorkConfig {
         this.output = output;
     }
 
-    public String getOutType() {
+    public GlobalConstant.OutType getOutType() {
         return outType;
     }
 
-    public void setOutType(String outType) {
+    public void setOutType(GlobalConstant.OutType outType) {
         this.outType = outType;
     }
 

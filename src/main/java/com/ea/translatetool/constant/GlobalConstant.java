@@ -3,6 +3,10 @@ package com.ea.translatetool.constant;
 public interface GlobalConstant {
     String CONFIG_FILE_PATH = "toolConfig.properties";
 
+    String REGEX_KEY = "";
+    String REGEX_LOCAL = "";
+    String REGEX_TRANS_LATE = "";
+
     interface AppConfigDefaultValue {
         String LOCAL_MAP_FILE_PATH = "localMap.properties";
         String EXIST_KEY_SAVE_DIR = "existKey/";
@@ -13,6 +17,11 @@ public interface GlobalConstant {
         String FILE_PREFIX = "";
         String FILE_SUFFIX = "";
         boolean IS_COVER_KEY = false;
+    }
+
+    enum Orientation {
+        HORIZONTAL,
+        VERTICAL
     }
 
     enum OutType {
@@ -31,5 +40,6 @@ public interface GlobalConstant {
         public void setValue(String value) {
             this.value = value;
         }
+
     }
 }

@@ -6,6 +6,7 @@ import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
 import com.ea.translatetool.config.WorkConfig;
+import com.ea.translatetool.util.LoggerUtil;
 import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowTool;
 
@@ -113,13 +114,13 @@ public class UI extends JFrame {
             // Windows Classic风格
             // UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsClassicLookAndFeel");
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         } catch (InstantiationException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         } catch (UnsupportedLookAndFeelException e) {
-            e.printStackTrace();
+            LoggerUtil.error(e.getMessage());
         }
     }
 
