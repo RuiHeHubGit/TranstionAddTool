@@ -3,17 +3,13 @@ package com.ea.translatetool.constant;
 public interface GlobalConstant {
     String CONFIG_FILE_PATH = "toolConfig.properties";
 
-    interface Path {
-        String[] INPUT = {"excelFiles/"};
-        String OUTPUT = "translateFiles/";
-    }
-
     interface AppConfigDefaultValue {
-        String EXIST_KEY_SAVE_DIR = "";
-        String LOG_SAVE_DIR = "";
+        String LOCAL_MAP_FILE_PATH = "localMap.properties";
+        String EXIST_KEY_SAVE_DIR = "existKey/";
+        String LOG_SAVE_DIR = "logs/";
         String LOG_LEVEL = "INFO";
-        String[] IN_PATH = {""};
-        String OUT_PATH = "";
+        String[] IN_PATH = {"excelFiles/"};
+        String OUT_PATH = "translateFiles/";
         String FILE_PREFIX = "";
         String FILE_SUFFIX = "";
         boolean IS_COVER_KEY = false;

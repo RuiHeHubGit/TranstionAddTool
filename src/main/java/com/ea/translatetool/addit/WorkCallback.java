@@ -9,5 +9,5 @@ public interface WorkCallback {
     void onStart(WorkStage stage);
     void onProgress(long complete, long total);
     void onDone(WorkStage stage);
-    void onError(Throwable t);
+    boolean onError(Throwable t);
 }

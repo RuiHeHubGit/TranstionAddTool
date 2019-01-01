@@ -71,8 +71,9 @@ public class Addit {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 running = false;
-                callback.onError(e);
-                return;
+                if(callback != null && callback.onError(e)) {
+                    return;
+                }
             }
             if(callback != null) {
                 callback.onProgress(i, total);
@@ -140,8 +141,8 @@ public class Addit {
             try {
                 parseTranslateFile(workConfig, sourceFiles.get(i));
             } catch (Exception e) {
-                if(callback != null) {
-                    callback.onError(e);
+                if(callback != null && callback.onError(e)) {
+                    return;
                 }
             }
 

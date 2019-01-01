@@ -21,6 +21,7 @@ public class WorkConfig {
     private Integer localColumn;
     private Integer translateColumn;
     private List<Translate> translateList;
+    private HashMap<String, String> localMap;
     private HashMap<String, ColumnPosition> columnPositionMap;
 
     public String getFilePrefix() {
@@ -101,6 +102,14 @@ public class WorkConfig {
 
     public void setTranslateList(List<Translate> translateList) {
         this.translateList = translateList;
+    }
+
+    public HashMap<String, String> getLocalMap() {
+        return localMap;
+    }
+
+    public void setLocalMap(HashMap<String, String> localMap) {
+        this.localMap = localMap;
     }
 
     public HashMap<String, ColumnPosition> getColumnPositionMap() {

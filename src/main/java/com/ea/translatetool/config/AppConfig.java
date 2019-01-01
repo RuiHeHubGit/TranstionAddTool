@@ -4,6 +4,7 @@ package com.ea.translatetool.config;
  * Created by HeRui on 2018/12/23.
  */
 public class AppConfig {
+    private String localMapFilePath;
     private String existKeySaveDir;
     private String logSaveDir;
     private String logLevel;
@@ -12,6 +13,14 @@ public class AppConfig {
     private String filePrefix;
     private String fileSuffix;
     private boolean isCoverKey;
+
+    public String getLocalMapFilePath() {
+        return localMapFilePath;
+    }
+
+    public void setLocalMapFilePath(String localMapFilePath) {
+        this.localMapFilePath = localMapFilePath;
+    }
 
     public String getExistKeySaveDir() {
         return existKeySaveDir;
