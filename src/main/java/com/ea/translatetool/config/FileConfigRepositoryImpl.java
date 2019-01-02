@@ -83,6 +83,8 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                         }
                     }
                 }
+            } else {
+                storage(config, pro);
             }
 
         } catch (InstantiationException e) {
@@ -100,6 +102,8 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
         File saveFile = new File((String) pro.get(CONFIG_FILE_PATH_KEY));
         if(!saveFile.exists()) {
             try {
+                if(!saveFile.getParentFile().exists())
+                    saveFile.getParentFile().mkdirs();
                 saveFile.createNewFile();
             } catch (IOException e) {
                 LoggerUtil.error(e.getMessage());

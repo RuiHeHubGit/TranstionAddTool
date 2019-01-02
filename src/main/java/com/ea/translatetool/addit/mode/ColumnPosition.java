@@ -40,4 +40,14 @@ public class ColumnPosition {
     public void setOrientation(int orientation) {
         this.orientation = orientation;
     }
+
+    @Override
+    public String toString() {
+        return "ColumnPosition{" +
+                "keyColumn=" + keyColumn +
+                ", localColumn=" + localColumn +
+                ", translateColumn=" + translateColumn +
+                ", orientation=" + orientation +
+                '}';
+    }
 }

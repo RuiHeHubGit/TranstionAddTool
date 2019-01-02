@@ -1,14 +1,13 @@
 package com.ea.translatetool.constant;
 
 public interface GlobalConstant {
-    String CONFIG_FILE_PATH = "toolConfig.properties";
+    String CONFIG_FILE_PATH = "config/toolConfig.properties";
 
-    String REGEX_KEY = "";
-    String REGEX_LOCAL = "";
-    String REGEX_TRANS_LATE = "";
+    String REGEX_KEY = "(([a-zA-Z]{2,10}\\.){2,10})+[a-zA-Z_\\d]+";
+    String REGEX_LOCAL = "^[a-zA-Z]{2,8}_[a-zA-Z]{2,8}$";
 
     interface AppConfigDefaultValue {
-        String LOCAL_MAP_FILE_PATH = "localMap.properties";
+        String LOCAL_MAP_FILE_PATH = "config/localMap.properties";
         String EXIST_KEY_SAVE_DIR = "existKey/";
         String LOG_SAVE_DIR = "logs/";
         String LOG_LEVEL = "INFO";

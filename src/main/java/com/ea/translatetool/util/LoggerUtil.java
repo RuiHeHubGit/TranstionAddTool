@@ -1,5 +1,6 @@
 package com.ea.translatetool.util;
 
+import java.io.*;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -40,6 +41,20 @@ public class LoggerUtil {
     public static void fine(String msg) {
         if(canLog("fine")) {
             LOG.fine(msg);
+        }
+    }
+
+    public static void exceptionLog(Throwable t) {
+        if(t == null) return;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        PrintStream printStream = new PrintStream(outputStream);
+        t.printStackTrace(printStream);
+        error(outputStream.toString());
+        printStream.close();
+        try {
+            outputStream.close();
+        } catch (IOException e) {
+            error(e.getMessage());
         }
     }
 

@@ -81,6 +81,7 @@ public class CmdMode {
 
             @Override
             public boolean onError(Throwable t) {
+                LoggerUtil.exceptionLog(t);
                 return true;
             }
         });

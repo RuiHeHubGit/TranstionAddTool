@@ -93,7 +93,7 @@ public class Addit {
         List<Translate> localAllTranslates = new ArrayList<>();
         for (Translate translate : workConfig.getTranslateList()) {
             if(!translate.getLocal().equals(lastLocal)) {
-                if(null != lastLocal) {
+                if(null != lastLocal && !lastLocal.isEmpty()) {
                     try {
                         saveTranslateToFile(localAllTranslates, getLocalFile(workConfig, lastLocal),
                                 workConfig.getOutType());
@@ -120,6 +120,8 @@ public class Addit {
 
     private void saveTranslateToFile(List<Translate> localAllTranslates, File localFile, GlobalConstant.OutType outType) throws IOException {
         if(!localFile.exists()) {
+            if(!localFile.getParentFile().exists())
+                localFile.getParentFile().mkdirs();
             localFile.createNewFile();
         }
         List<String> lines = IOUtil.readText(localFile);
@@ -177,7 +179,7 @@ public class Addit {
 
     private File getLocalFile(WorkConfig workConfig, String local) {
         return new File(workConfig.getOutput(),
-                workConfig.getFilePrefix()+local+workConfig.getFileSuffix()+workConfig.getOutType());
+                workConfig.getFilePrefix()+local+workConfig.getFileSuffix()+"."+workConfig.getOutType().getValue());
     }
 
     private void mergeNewAddTranslate(WorkConfig workConfig) {
@@ -204,6 +206,7 @@ public class Addit {
         if(sourceFiles == null) {
             sourceFiles = new ArrayList<>();
         }
+        sourceFiles.clear();
         for (final File file : inputPathList) {
             List<File> files =  IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
                 @Override
@@ -241,6 +244,9 @@ public class Addit {
         if(workConfig.getTranslateList() == null) {
             workConfig.setTranslateList(new ArrayList<Translate>());
         }
+        if(workConfig.getColumnPositionMap() == null) {
+            workConfig.setColumnPositionMap(new HashMap<String, ColumnPosition>());
+        }
         for (int i=0; i<sourceFiles.size(); ++i) {
             try {
                 parseTranslateFile(workConfig, sourceFiles.get(i));
@@ -261,6 +267,8 @@ public class Addit {
             workStage.setEnd(new Date());
             callback.onDone(workStage);
         }
+
+        System.out.println(workConfig.getColumnPositionMap());
     }
 
     private void parseTranslateFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
@@ -270,7 +278,7 @@ public class Addit {
         List<Translate> translateList = workConfig.getTranslateList();
         if(excelContent.size() > 0) {
             if(columnPosition == null) {
-                columnPosition = getAppropriatePosition(excelContent,
+                columnPosition = getSuitablePosition(excelContent,
                         workConfig.getVertical(),
                         workConfig.getKeyColumn(),
                         workConfig.getLocalColumn(),
@@ -281,9 +289,9 @@ public class Addit {
                 columnPositionMap.put(file.getAbsolutePath(), columnPosition);
             }
 
-            Translate translate = new Translate();
             if (columnPosition.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
                 for (List<String> row : excelContent) {
+                    Translate translate = new Translate();
                     translate.setKey(row.get(columnPosition.getKeyColumn()));
                     translate.setLocal(row.get(columnPosition.getLocalColumn()));
                     translate.setTranslate(row.get(columnPosition.getTranslateColumn()));
@@ -292,6 +300,7 @@ public class Addit {
             } else {
                 List<String> columns = excelContent.get(0);
                 for (int i = 0; i<columns.size(); ++i) {
+                    Translate translate = new Translate();
                     translate.setKey(excelContent.get(columnPosition.getKeyColumn()).get(i));
                     translate.setLocal(excelContent.get(columnPosition.getLocalColumn()).get(i));
                     translate.setTranslate(excelContent.get(columnPosition.getTranslateColumn()).get(i));
@@ -303,7 +312,8 @@ public class Addit {
         }
     }
 
-    private ColumnPosition getAppropriatePosition(List<List<String>> excelContent, Boolean vertical, Integer keyColumn, Integer localColumn, Integer translateColumn) {
+    private ColumnPosition getSuitablePosition(List<List<String>> excelContent, Boolean vertical,
+                                               Integer keyColumn, Integer localColumn, Integer translateColumn) {
 
         if(excelContent == null || excelContent.isEmpty()
                 || excelContent.size() < 3 && excelContent.get(0).size() < 3) {
@@ -318,72 +328,80 @@ public class Addit {
             return columnPosition;
         }
 
-        float maxSameKey = 0;
-        float maxSameLocal = 0;
-        float maxSameTranslate = 0;
-        float same;
+        float maxKeySameLv = 0, maxLocalSameLv = 0, maxTranslateSameLv = 0;
+        float keySameLv, localSameLv, listDisperseLv;
         for (int i=0; i<rows; ++i) {
-            same = calcSame(excelContent.get(i), GlobalConstant.REGEX_KEY);
-            if(same > maxSameKey) {
-                maxSameKey = same;
+            keySameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_KEY);
+            localSameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_LOCAL);
+
+            if(keySameLv >= localSameLv && keySameLv >= maxKeySameLv) {
+                maxKeySameLv = keySameLv;
                 keyColumn = i;
             }
 
-            same = calcSame(excelContent.get(i), GlobalConstant.REGEX_LOCAL);
-            if(same > maxSameKey && same > maxSameLocal) {
-                maxSameLocal = same;
+            if(localSameLv >= keySameLv && localSameLv >= maxLocalSameLv) {
+                maxLocalSameLv = localSameLv;
                 localColumn = i;
             }
 
-            same = calcSame(excelContent.get(i), GlobalConstant.REGEX_TRANS_LATE);
-            if(same > maxSameKey && same > maxSameLocal && same > maxSameTranslate) {
-                maxSameTranslate = same;
+            if(keySameLv > 0.9 || localSameLv > 0.9) continue;
+
+            listDisperseLv = calcListNotSimilarLevel(excelContent.get(i));
+            if(listDisperseLv >= keySameLv && listDisperseLv >= localSameLv && listDisperseLv >= maxTranslateSameLv) {
+                maxTranslateSameLv = listDisperseLv;
                 translateColumn = i;
             }
         }
 
-        float maxSameKeyH = 0;
-        float maxSameLocalH = 0;
-        float maxSameTranslateH = 0;
-        int keyColumnH = 0;
-        int localColumnH = 0;
-        int translateColumnH = 0;
+        float maxKeySameLvH = 0, maxLocalSameLvH = 0, maxTranslateLvH = 0;
+        int keyColumnH = 0, localColumnH = 0, translateColumnH = 0;
+        List<String> columnContents = new ArrayList<>();
         for (int i=0; i<columns; ++i) {
-            List<String> columnContents = new ArrayList<>();
+            columnContents.clear();
             for (int j=0; j<rows; ++j) {
                 columnContents.add(excelContent.get(j).get(i));
             }
-            same = calcSame(columnContents, GlobalConstant.REGEX_KEY);
-            if(same > maxSameKeyH) {
-                maxSameKeyH = same;
+            keySameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_KEY);
+            localSameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_LOCAL);
+
+            if(keySameLv >= localSameLv && keySameLv >= maxKeySameLvH) {
+                maxKeySameLvH = keySameLv;
                 keyColumnH = i;
             }
 
-            same = calcSame(columnContents, GlobalConstant.REGEX_LOCAL);
-            if(same > maxSameKeyH && same > maxSameLocalH) {
-                maxSameLocalH = same;
+            if(localSameLv >= keySameLv && localSameLv >= maxLocalSameLvH) {
+                maxLocalSameLvH = localSameLv;
                 localColumnH = i;
             }
 
-            same = calcSame(columnContents, GlobalConstant.REGEX_TRANS_LATE);
-            if(same > maxSameKeyH && same > maxSameLocalH && same > maxSameTranslateH) {
-                maxSameTranslateH = same;
+            if(keySameLv > 0.9 || localSameLv > 0.9) continue;
+
+            listDisperseLv = calcListNotSimilarLevel(columnContents);
+            if(listDisperseLv >= keySameLv && listDisperseLv >= localSameLv && listDisperseLv >= maxTranslateLvH) {
+                maxTranslateLvH = listDisperseLv;
                 translateColumnH = i;
             }
         }
 
-        if(maxSameKeyH >= 0.5 && maxSameLocalH >= 0.5 && maxSameTranslateH >= 0.5) {
-            if(maxSameKeyH + maxSameLocalH + maxSameTranslateH > maxSameKey + maxSameLocal + maxSameTranslate) {
+        if(maxKeySameLv < 0.5 || maxLocalSameLv < 0.5 || maxTranslateSameLv < 0.5) {
+            maxKeySameLv = maxLocalSameLv = maxTranslateSameLv = 0;
+        }
+
+        if(maxKeySameLvH >= 0.5 && maxLocalSameLvH >= 0.5 && maxTranslateLvH >= 0.5) {
+            if(maxKeySameLvH + maxLocalSameLvH + maxTranslateLvH > maxKeySameLv + maxLocalSameLv + maxTranslateSameLv) {
                 vertical = false;
                 keyColumn = keyColumnH;
                 localColumn = localColumnH;
                 translateColumn = translateColumnH;
+                maxKeySameLv = maxLocalSameLvH;
+                maxLocalSameLv = maxLocalSameLvH;
+                maxTranslateSameLv = maxTranslateLvH;
             }
         } else {
             vertical = true;
         }
 
-        if(maxSameKey < 0.5 || maxSameLocal < 0.5 || maxSameTranslate < 0.5) {
+        if(maxKeySameLv < 0.5 || maxLocalSameLv < 0.5 || maxTranslateSameLv < 0.5) {
             return null;
         }
 
@@ -419,7 +437,27 @@ public class Addit {
         return null;
     }
 
-    private float calcSame(List<String> strings, String regex) {
+    private float calcListNotSimilarLevel(List<String> strings) {
+        int count = 0;
+        if(strings == null || strings.size() < 2) return 1;
+
+        int right = strings.size()-1;
+        String strSource;
+        String strCompared;
+        for (int i=0; i<right; ++i) {
+            strSource = strings.get(i);
+            strCompared = strings.get(i+1);
+            if(sourceFiles.isEmpty() || strCompared.isEmpty()) {
+                continue;
+            }
+            if(!isSimilar(strSource, strCompared, 10, strSource.length())) {
+                ++count;
+            }
+        }
+        return 1.0f * count / strings.size();
+    }
+
+    private float calcSimilarLevel(List<String> strings, String regex) {
         int count = 0;
         if(strings == null || strings.isEmpty()) return 0;
 
@@ -430,6 +468,58 @@ public class Addit {
             }
         }
         return 1.0f * count / strings.size();
+    }
+
+    /**
+     * 判断两个字符串相似度,可设置level
+     * @param strSource 原字符串
+     * @param strCompared 比较字符串
+     * @param level 评分阀值
+     * @param moreCount 比较字符串比原字符串多多少个限制
+     * @return
+     */
+    public static Boolean isSimilar(String strSource,String strCompared, int level,int moreCount){
+        if(strCompared.length()-strSource.length()>moreCount){
+            return false;
+        }
+        int count=strSource.length();
+        int maxSameCount=0;
+        //遍历count次
+        for(int i=0;i<count;i++){
+            int nowSameCount=0;
+            int c=0;
+            int lastIndex=0;//记录上一次匹配的目标索引
+            //遍历每一次的原字符串所有字段
+            for(int j=i;j<strSource.length();j++){
+                char charSource=strSource.charAt(j);
+                for(;c<strCompared.length();c++){
+                    char charCompare=strCompared.charAt(c);
+                    if(charSource==charCompare){
+                        nowSameCount++;
+                        lastIndex=++c;//如果匹配,手动加1
+                        break;
+                    }
+                }
+                c=lastIndex;//遍历完目标字符串,记录当前匹配索引
+            }
+            if(nowSameCount>maxSameCount){
+                maxSameCount=nowSameCount;
+            }
+        }
+        //大于原字符串数量的情况
+        if(maxSameCount>count){
+            maxSameCount=count-(maxSameCount-count);
+        }
+        double dLv= (double)100*maxSameCount/count;
+        int iLv=10*maxSameCount/count*10;
+        int cha=(int)dLv-iLv;
+        int yu=cha>5?1:0;
+        iLv+=yu*10;
+        if(iLv/10>=level){
+            return true;
+        }else{
+            return false;
+        }
     }
 
     public static WorkConfig getDefaultWorkConfig() {
