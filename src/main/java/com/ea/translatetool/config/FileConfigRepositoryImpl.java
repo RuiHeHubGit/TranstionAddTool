@@ -68,20 +68,19 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                                                 f.set(config, Boolean.parseBoolean(value));
                                             } else if (String.class.isAssignableFrom(f.getType())) {
                                                 f.set(config, value);
-                                            } else if (String.class.isAssignableFrom(f.getType())) {
+                                            } else if (f.getType().isArray()) {
                                                 f.set(config, value.split(","));
                                             }
                                             ++count;
-                                        } catch (Exception e) {
-                                        }
+                                        } catch (Exception e) {}
                                     }
                                 }
                             }
                         }
-                        if(count < fields.length) {
-                            storage(config, pro);
-                        }
                     }
+                }
+                if(count < fields.length) {
+                    storage(config, pro);
                 }
             } else {
                 storage(config, pro);

@@ -9,20 +9,21 @@ import java.util.List;
  * Created by HeRui on 2018/12/24.
  */
 public class IOUtil {
-    public static List<File> fileList(File file, boolean deep, DirectoryStream.Filter<File> filter) {
+    public static List<File> fileList(File file, boolean deep, DirectoryStream.Filter<File> filter) throws IOException {
         List<File> fileList = new ArrayList<>();
-        scanPath(file, fileList, deep);
+        scanPath(file, fileList, deep, filter);
         return fileList;
     }
 
-    private static void scanPath(File file, List<File> fileList, boolean deep) {
+    private static void scanPath(File file, List<File> fileList, boolean deep, DirectoryStream.Filter<File> filter) throws IOException {
         if(file.exists()) {
             if (deep && file.isDirectory()) {
                 File[] files = file.listFiles();
                 for (File f : files) {
-                    scanPath(f, fileList, deep);
+                    scanPath(f, fileList, deep, filter);
                 }
             } else if(file.isFile()) {
+                if(filter != null && !filter.accept(file)) return;
                 fileList.add(file);
             }
         }

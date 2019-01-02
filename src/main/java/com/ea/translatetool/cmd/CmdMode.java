@@ -36,10 +36,28 @@ public class CmdMode {
         translates = new ArrayList<Translate>();
         exitStatus = 1;
         addShutdownHandler();
+        initWorkConfig();
+    }
+
+    private void initWorkConfig() {
         workConfig = Addit.getDefaultWorkConfig();
         workConfig.setLocalMap(app.loadLocalMap(app.getAppConfig().getLocalMapFilePath()));
         workConfig.setFilePrefix(app.getAppConfig().getFilePrefix());
         workConfig.setFileSuffix(app.getAppConfig().getFileSuffix());
+        List<File> inputPaths = new ArrayList<>();
+        for (String path : app.getAppConfig().getInPath()) {
+            File file = new File(path);
+            if(file.exists()) {
+                inputPaths.add(file);
+            }
+        }
+        workConfig.setInput(inputPaths);
+
+        File outPath = new File(app.getAppConfig().getOutPath());
+        if(outPath.exists()) {
+            workConfig.setOutput(outPath);
+        }
+
     }
 
     public synchronized static void start(App app, String[] args) {
@@ -47,7 +65,7 @@ public class CmdMode {
             cmdMode = new CmdMode(app);
             cmdMode.definedOptions();
             try {
-                cmdMode.workConfig = cmdMode.parseOptions(args, Addit.getDefaultWorkConfig(), 1);
+                cmdMode.parseOptions(args, cmdMode.workConfig, 1);
                 if(cmdMode.workConfig != null) {
                     cmdMode.doStart(cmdMode.workConfig);
                 }

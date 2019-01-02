@@ -233,7 +233,7 @@ public class Addit {
         }
     }
 
-    public void loadTranslateFiles(WorkConfig workConfig, WorkCallback callback) throws NotFoundExcelException {
+    public void loadTranslateFiles(WorkConfig workConfig, WorkCallback callback) throws NotFoundExcelException, IOException {
         List<File> inputPathList = workConfig.getInput();
         WorkStage workStage =  new WorkStage(mode, stage, stageCount, 3, "load files", "", new Date(), null);
         if(callback != null) {
@@ -244,10 +244,12 @@ public class Addit {
         }
         sourceFiles.clear();
         for (final File file : inputPathList) {
+            LoggerUtil.info(file.getAbsolutePath());
             List<File> files =  IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
                 @Override
                 public boolean accept(File entry) throws IOException {
                     if(entry.isFile()
+                            && !entry.getName().startsWith("~$")
                             && (entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
                                     || entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX))) {
                         return true;
