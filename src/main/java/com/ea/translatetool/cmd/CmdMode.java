@@ -65,7 +65,7 @@ public class CmdMode {
             cmdMode = new CmdMode(app);
             cmdMode.definedOptions();
             try {
-                cmdMode.parseOptions(args, cmdMode.workConfig, 1);
+                cmdMode.workConfig = cmdMode.parseOptions(args, cmdMode.workConfig, 1);
                 if(cmdMode.workConfig != null) {
                     cmdMode.doStart(cmdMode.workConfig);
                 }
@@ -84,7 +84,7 @@ public class CmdMode {
                 if(stage.getIndex() == 1) {
                     System.out.println("start ..");
                 }
-                System.out.println(stage.getName());
+                System.out.println("\n"+stage.getName());
             }
 
             @Override
@@ -94,7 +94,7 @@ public class CmdMode {
 
             @Override
             public void onDone(WorkStage stage) {
-                System.out.println("\n"+stage.getName()+" finished.");
+                System.out.println("\n"+stage.getName()+" finished.\n");
                 WindowTool.getInstance().enableSystemMenu(WindowTool.SC_CLOSE, true);
             }
 
@@ -102,11 +102,11 @@ public class CmdMode {
             public boolean onError(Throwable t) {
                 if(t instanceof RepeatingKeyException) {
                     // TODO: 1/2/2019
-                    List<Translate> repeatList = ((RepeatingKeyException)t).getRepeatList();
-                    LoggerUtil.info(repeatList.toString());
+                    // List<Translate> repeatList = ((RepeatingKeyException)t).getRepeatList();
+                    // LoggerUtil.info(repeatList.toString());
                     return false;
                 } else {
-                    LoggerUtil.exceptionLog(t);
+                   // LoggerUtil.exceptionLog(t);
                     return true;
                 }
             }

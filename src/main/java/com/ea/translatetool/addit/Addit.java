@@ -99,7 +99,6 @@ public class Addit {
                         List<Translate> notSave = saveTranslateToFile(localAllTranslates, getLocalFile(workConfig, lastLocal),
                                 workConfig.getOutType());
                         if(!notSave.isEmpty()) {
-                            LoggerUtil.error(notSave.size()+" keys repeat.");
                             if(callback != null && !callback.onError(new RepeatingKeyException(notSave, notSave.size()+" keys repeat."))) {
                                 // TODO: 1/2/2019
                                 // 处理重复的key
@@ -121,6 +120,9 @@ public class Addit {
         }
 
         if(callback != null) {
+            callback.onProgress(total, total);
+        }
+        if(callback != null) {
             workStage.setEnd(new Date());
             callback.onDone(workStage);
         }
@@ -133,7 +135,7 @@ public class Addit {
                 localFile.getParentFile().mkdirs();
             localFile.createNewFile();
         }
-        List<String> lines = IOUtil.readText(localFile);
+        List<String> lines = IOUtil.readText(localFile, null);
         if(lines.isEmpty()) {
             addTranslateStartAndEndToList(lines, outType);
         }
@@ -146,7 +148,7 @@ public class Addit {
             String line = lines.get(lines.size()-2);
             lines.set(lines.size()-2, line.substring(0, line.length()-1));
         }
-        IOUtil.saveLinesToFile(lines, localFile);
+        IOUtil.saveLinesToFile(lines, localFile, null);
         return notSaveTranslateList;
     }
 
@@ -244,7 +246,6 @@ public class Addit {
         }
         sourceFiles.clear();
         for (final File file : inputPathList) {
-            LoggerUtil.info(file.getAbsolutePath());
             List<File> files =  IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
                 @Override
                 public boolean accept(File entry) throws IOException {
@@ -302,15 +303,17 @@ public class Addit {
         }
 
         if(callback != null) {
+            callback.onProgress(sourceFiles.size(), sourceFiles.size());
+        }
+        if(callback != null) {
             workStage.setEnd(new Date());
             callback.onDone(workStage);
         }
-
-        System.out.println(workConfig.getColumnPositionMap());
     }
 
     private void parseTranslateFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
         HashMap<String, ColumnPosition> columnPositionMap = workConfig.getColumnPositionMap();
+        HashMap<String, String> localMap = workConfig.getLocalMap();
         ColumnPosition columnPosition = columnPositionMap.get(file.getAbsolutePath());
         List<List<String>> excelContent = ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0);
         List<Translate> translateList = workConfig.getTranslateList();
@@ -332,6 +335,9 @@ public class Addit {
                     String key = row.get(columnPosition.getKeyColumn());
                     String local = row.get(columnPosition.getLocalColumn());
                     String translateText = row.get(columnPosition.getTranslateColumn());
+                    if(localMap.containsKey(local)) {
+                        local = localMap.get(local);
+                    }
                     if(key.indexOf('.') <= 0 && local.indexOf('_') <= 0) continue;
                     Translate translate = new Translate();
                     translate.setKey(key);
@@ -345,6 +351,9 @@ public class Addit {
                     String key = excelContent.get(columnPosition.getKeyColumn()).get(i);
                     String local = excelContent.get(columnPosition.getLocalColumn()).get(i);
                     String translateText = excelContent.get(columnPosition.getTranslateColumn()).get(i);
+                    if(localMap.containsKey(local)) {
+                        local = localMap.get(local);
+                    }
                     if(key.indexOf('.') <= 0 && local.indexOf('_') <= 0) continue;
                     Translate translate = new Translate();
                     translate.setKey(key);
