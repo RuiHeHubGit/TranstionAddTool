@@ -3,6 +3,7 @@ package com.ea.translatetool.cmd;
 import com.ea.translatetool.App;
 import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.WorkCallback;
+import com.ea.translatetool.addit.exception.RepeatingKeyException;
 import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
@@ -81,8 +82,15 @@ public class CmdMode {
 
             @Override
             public boolean onError(Throwable t) {
-                LoggerUtil.exceptionLog(t);
-                return true;
+                if(t instanceof RepeatingKeyException) {
+                    // TODO: 1/2/2019
+                    List<Translate> repeatList = ((RepeatingKeyException)t).getRepeatList();
+                    LoggerUtil.info(repeatList.toString());
+                    return false;
+                } else {
+                    LoggerUtil.exceptionLog(t);
+                    return true;
+                }
             }
         });
     }
@@ -126,10 +134,10 @@ public class CmdMode {
                 .hasArgs().argName("path1,path2...").valueSeparator(',').desc("Source file of excel.").build();
 
         Option optOutput = Option.builder("o").longOpt("out")
-                .hasArg().argName("dir").desc("out json or xml").build();
+                .hasArg().argName("dir").desc("out json or properties").build();
 
         Option optOutputType = Option.builder("ot").longOpt("outType")
-                .hasArg().argName("json or xml").desc("Default value is json").build();
+                .hasArg().argName("json or properties").desc("Default value is json").build();
 
         Option optColumns = Option.builder("cs").longOpt("columns")
                 .hasArgs().argName("number1,number1,number1").valueSeparator(',').desc("key,local,translate").build();

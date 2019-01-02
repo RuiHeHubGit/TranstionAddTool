@@ -2,6 +2,7 @@ package com.ea.translatetool.addit;
 
 import com.ea.translatetool.addit.exception.InvalidExcelContentException;
 import com.ea.translatetool.addit.exception.NotFoundExcelException;
+import com.ea.translatetool.addit.exception.RepeatingKeyException;
 import com.ea.translatetool.addit.mode.ColumnPosition;
 import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.mode.WorkStage;
@@ -95,8 +96,15 @@ public class Addit {
             if(!translate.getLocal().equals(lastLocal)) {
                 if(null != lastLocal && !lastLocal.isEmpty()) {
                     try {
-                        saveTranslateToFile(localAllTranslates, getLocalFile(workConfig, lastLocal),
+                        List<Translate> notSave = saveTranslateToFile(localAllTranslates, getLocalFile(workConfig, lastLocal),
                                 workConfig.getOutType());
+                        if(!notSave.isEmpty()) {
+                            LoggerUtil.error(notSave.size()+" keys repeat.");
+                            if(callback != null && !callback.onError(new RepeatingKeyException(notSave, notSave.size()+" keys repeat."))) {
+                                // TODO: 1/2/2019
+                                // 处理重复的key
+                            }
+                        }
                     } catch (IOException e) {
                         if(callback != null && callback.onError(e)) {
                             return;
@@ -118,7 +126,8 @@ public class Addit {
         }
     }
 
-    private void saveTranslateToFile(List<Translate> localAllTranslates, File localFile, GlobalConstant.OutType outType) throws IOException {
+    private List<Translate> saveTranslateToFile(List<Translate> localAllTranslates, File localFile, GlobalConstant.OutType outType) throws IOException {
+        List<Translate> notSaveTranslateList = new ArrayList<>();
         if(!localFile.exists()) {
             if(!localFile.getParentFile().exists())
                 localFile.getParentFile().mkdirs();
@@ -129,20 +138,42 @@ public class Addit {
             addTranslateStartAndEndToList(lines, outType);
         }
         for (Translate translate : localAllTranslates) {
-            insertStringToListOnLastSameIndex(lines, translateToLineString(translate, outType));
+            if(!insertStringToListOnLastSameIndex(lines, translateToLineString(translate, outType), getDivisionChar(outType))) {
+                notSaveTranslateList.add(translate);
+            }
+        }
+        if(lines.get(lines.size()-2).endsWith(",")) {
+            String line = lines.get(lines.size()-2);
+            lines.set(lines.size()-2, line.substring(0, line.length()-1));
         }
         IOUtil.saveLinesToFile(lines, localFile);
+        return notSaveTranslateList;
     }
 
-    private void insertStringToListOnLastSameIndex(List<String> lines, String s) {
+    private Character getDivisionChar(GlobalConstant.OutType outType) {
+        switch (outType) {
+            case TYPE_JSON:
+                return ':';
+            case TYPE_PRO:
+                return '=';
+            default:
+                throw new IllegalArgumentException("unknown type of out.");
+        }
+    }
+
+    private boolean insertStringToListOnLastSameIndex(List<String> lines, String s, Character limitChar) {
         int lastSameIndex = lines.size();
         int lastSameLen = 0;
         int cIndex;
         for (int i=0; i<lines.size(); ++i) {
-            String line = lines.get(i);
-            for (cIndex=0; line.length()>=lastSameLen && cIndex<line.length() && cIndex < s.length(); ++cIndex) {
-                if(line.charAt(cIndex) != s.charAt(cIndex)) {
+            String line = lines.get(i).trim();
+            String source = s.trim();
+            for (cIndex=0; line.length()>=lastSameLen && cIndex<line.length() && cIndex < source.length(); ++cIndex) {
+                if(line.charAt(cIndex) != source.charAt(cIndex)) {
                     break;
+                }
+                if(limitChar != null && line.charAt(cIndex) == limitChar) {
+                    return false;
                 }
             }
             if(cIndex >= lastSameLen) {
@@ -151,13 +182,18 @@ public class Addit {
             }
         }
         lines.add(lastSameIndex, s);
+        return true;
     }
 
     private String translateToLineString(Translate translate, GlobalConstant.OutType outType) {
+        String key = translate.getKey().trim();
+        String translateText = translate.getTranslate().trim();
         switch (outType) {
             case TYPE_JSON:
-                return translate.getKey().trim()+":\""+translate.getTranslate().trim()+"\"";
-            case TYPE_XML:
+                key = key.replace("\"", "\\\"");
+                translateText = translateText.replace("\"", "\\\"");
+                return "\t\""+key+"\":\""+translateText+"\",";
+            case TYPE_PRO:
                 return translate.getKey().trim()+"=\""+translate.getTranslate().trim()+"\"";
             default:
                 throw new IllegalArgumentException("unknown type of out.");
@@ -170,7 +206,7 @@ public class Addit {
                 lines.add("{");
                 lines.add("}");
                 break;
-            case TYPE_XML:
+            case TYPE_PRO:
                 break;
             default:
                 throw new IllegalArgumentException("unknown type of out.");
@@ -291,19 +327,27 @@ public class Addit {
 
             if (columnPosition.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
                 for (List<String> row : excelContent) {
+                    String key = row.get(columnPosition.getKeyColumn());
+                    String local = row.get(columnPosition.getLocalColumn());
+                    String translateText = row.get(columnPosition.getTranslateColumn());
+                    if(key.indexOf('.') <= 0 && local.indexOf('_') <= 0) continue;
                     Translate translate = new Translate();
-                    translate.setKey(row.get(columnPosition.getKeyColumn()));
-                    translate.setLocal(row.get(columnPosition.getLocalColumn()));
-                    translate.setTranslate(row.get(columnPosition.getTranslateColumn()));
+                    translate.setKey(key);
+                    translate.setLocal(local);
+                    translate.setTranslate(translateText);
                     translateList.add(translate);
                 }
             } else {
                 List<String> columns = excelContent.get(0);
                 for (int i = 0; i<columns.size(); ++i) {
+                    String key = excelContent.get(columnPosition.getKeyColumn()).get(i);
+                    String local = excelContent.get(columnPosition.getLocalColumn()).get(i);
+                    String translateText = excelContent.get(columnPosition.getTranslateColumn()).get(i);
+                    if(key.indexOf('.') <= 0 && local.indexOf('_') <= 0) continue;
                     Translate translate = new Translate();
-                    translate.setKey(excelContent.get(columnPosition.getKeyColumn()).get(i));
-                    translate.setLocal(excelContent.get(columnPosition.getLocalColumn()).get(i));
-                    translate.setTranslate(excelContent.get(columnPosition.getTranslateColumn()).get(i));
+                    translate.setKey(key);
+                    translate.setLocal(local);
+                    translate.setTranslate(translateText);
                     translateList.add(translate);
                 }
             }
@@ -328,15 +372,17 @@ public class Addit {
             return columnPosition;
         }
 
-        float maxKeySameLv = 0, maxLocalSameLv = 0, maxTranslateSameLv = 0;
+        float maxKeySameLv = 0.5f, maxLocalSameLv = 0.5f, maxTranslateSameLv = 0.5f;
         float keySameLv, localSameLv, listDisperseLv;
         for (int i=0; i<rows; ++i) {
             keySameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_KEY);
             localSameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_LOCAL);
 
             if(keySameLv >= localSameLv && keySameLv >= maxKeySameLv) {
-                maxKeySameLv = keySameLv;
-                keyColumn = i;
+                if(calcListNotSimilarLevel(excelContent.get(i)) > 0.1) {
+                    maxKeySameLv = keySameLv;
+                    keyColumn = i;
+                }
             }
 
             if(localSameLv >= keySameLv && localSameLv >= maxLocalSameLv) {
@@ -353,7 +399,7 @@ public class Addit {
             }
         }
 
-        float maxKeySameLvH = 0, maxLocalSameLvH = 0, maxTranslateLvH = 0;
+        float maxKeySameLvH = 0.5f, maxLocalSameLvH = 0.5f, maxTranslateLvH = 0.5f;
         int keyColumnH = 0, localColumnH = 0, translateColumnH = 0;
         List<String> columnContents = new ArrayList<>();
         for (int i=0; i<columns; ++i) {
@@ -365,8 +411,10 @@ public class Addit {
             localSameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_LOCAL);
 
             if(keySameLv >= localSameLv && keySameLv >= maxKeySameLvH) {
-                maxKeySameLvH = keySameLv;
-                keyColumnH = i;
+                if(calcListNotSimilarLevel(columnContents) > 0.1) {
+                    maxKeySameLvH = keySameLv;
+                    keyColumnH = i;
+                }
             }
 
             if(localSameLv >= keySameLv && localSameLv >= maxLocalSameLvH) {
