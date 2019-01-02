@@ -1,3 +1,10 @@
 .idea
+classes
+logs
 *.iml
+*.class
+*.json
+*.dll
+*.properties
+
 
