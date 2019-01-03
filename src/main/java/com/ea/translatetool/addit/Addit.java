@@ -125,6 +125,7 @@ public class Addit {
             workStage.setEnd(new Date());
             callback.onDone(workStage);
         }
+        workConfig.getTranslateList().clear();
     }
 
     private List<Translate> saveTranslateToFile(List<Translate> localAllTranslates, File localFile, GlobalConstant.OutType outType, boolean cover) throws IOException {

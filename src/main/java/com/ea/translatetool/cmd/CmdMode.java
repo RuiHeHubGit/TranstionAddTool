@@ -378,8 +378,8 @@ public class CmdMode {
         float p = 1.0f * complete / total;
         int c = (int)(psWidth * p);
         int s = psWidth-c;
-        String progressText = StringUtil.createStringFromString(">", c)
-                + StringUtil.createStringFromString("_", s)
+        String progressText = StringUtil.createStringFromString("█", c)
+                + StringUtil.createStringFromString("░", s)
                 + String.format(" [%.2f%%]", p*100);
         System.out.print(progressText);
         System.out.print(StringUtil.createStringFromString("\b", progressText.length()));

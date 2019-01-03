@@ -31,6 +31,14 @@ public class App {
         }
     }
 
+    private void start(String[] args) {
+        if(PID.isStartWithWindowExplorer()) {
+            UI.start(this);
+        } else {
+            CmdMode.start(this, args);
+        }
+    }
+
     public synchronized AppConfig getAppConfig() {
         if(appConfig == null) {
             loadAppConfig();
@@ -44,13 +52,5 @@ public class App {
         properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, GlobalConstant.CONFIG_FILE_PATH);
         appConfig = configRepository.load(AppConfig.class, properties);
         System.getProperty("logLevel", appConfig.getLogLevel());
-    }
-
-    private void start(String[] args) {
-        if(PID.isStartWithWindowExplorer()) {
-            UI.start(this);
-        } else {
-            CmdMode.start(this, args);
-        }
     }
 }
