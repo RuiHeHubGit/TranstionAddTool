@@ -10,6 +10,7 @@ import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.util.LoggerUtil;
 import com.ea.translatetool.util.ShutdownHandler;
+import com.ea.translatetool.util.StringUtil;
 import com.ea.translatetool.util.WindowTool;
 import org.apache.commons.cli.*;
 
@@ -84,7 +85,7 @@ public class CmdMode {
                 if(stage.getIndex() == 1) {
                     System.out.println("start ..");
                 }
-                System.out.println("\n"+stage.getName());
+                System.out.println(stage.getName());
             }
 
             @Override
@@ -119,8 +120,8 @@ public class CmdMode {
             @Override
             public void run() {
                 if(Addit.isRunning()) {
-                    System.out.println(createStringFromString("\b", 60)
-                            + createStringFromString(" ", 60) + createStringFromString("\b", 60)
+                    System.out.println(StringUtil.createStringFromString("\b", 60)
+                            + StringUtil.createStringFromString(" ", 60) + StringUtil.createStringFromString("\b", 60)
                             +"WARNING:Terminating now will cause the task to fail!\n" +
                             "app will wait for the task to complete!");
                 }
@@ -274,7 +275,7 @@ public class CmdMode {
 
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
-                switch (line) {
+                switch (line.toLowerCase()) {
                     case "help":
                         printInputModeHelp();
                         break;
@@ -379,37 +380,22 @@ public class CmdMode {
         System.out.println("exit                       exit tool.");
         System.out.println("help                       look for help of input mode.");
         System.out.println("i <path1,path2...>;        set source.");
-        System.out.println("kc <number>;               set key-column.");
-        System.out.println("lc <number>;               set local-column.");
         System.out.println("list                       show the list of keys.");
         System.out.println("o <dir>;                   set out dir.");
         System.out.println("ot <[json|xml]>;           set out type,default is json.");
         System.out.println("start                      start do work.");
-        System.out.println("tc <number>;               set translate-column.");
         System.out.println("vt [true|false];           set vertical. empty value same true");
     }
 
-    public static String createStringFromString(String s, int length) {
-        if(length <= 0 || s == null ||  s.isEmpty()) {
-            return "";
-        }
-        StringBuilder stringBuilder = new StringBuilder(s);
-        while (stringBuilder.length() < length) {
-            stringBuilder.append(s);
-        }
-        if(stringBuilder.length() == length) {
-            return stringBuilder.toString();
-        }
-        return stringBuilder.substring(0, length);
-    }
 
     public static void showProgress(long complete, long total, int psWidth) {
         float p = 1.0f * complete / total;
         int c = (int)(psWidth * p);
         int s = psWidth-c;
-        System.out.print(createStringFromString("\b", psWidth + 10));
-        System.out.print(createStringFromString(">", c));
-        System.out.print(createStringFromString("_", s));
-        System.out.printf(" [%.2f%%]", p*100);
+        String progressText = StringUtil.createStringFromString(">", c)
+                + StringUtil.createStringFromString("_", s)
+                + String.format(" [%.2f%%]", p*100);
+        System.out.print(progressText);
+        System.out.print(StringUtil.createStringFromString("\b", progressText.length()));
     }
 }

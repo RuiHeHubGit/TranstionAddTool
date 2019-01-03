@@ -11,6 +11,7 @@ import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.util.ExcelUtil;
 import com.ea.translatetool.util.IOUtil;
 import com.ea.translatetool.util.LoggerUtil;
+import com.ea.translatetool.util.StringUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -97,11 +98,11 @@ public class Addit {
                 if(null != lastLocal && !lastLocal.isEmpty()) {
                     try {
                         List<Translate> notSave = saveTranslateToFile(localAllTranslates, getLocalFile(workConfig, lastLocal),
-                                workConfig.getOutType());
-                        if(!notSave.isEmpty()) {
+                                workConfig.getOutType(), false);
+                        if(notSave != null && !notSave.isEmpty()) {
                             if(callback != null && !callback.onError(new RepeatingKeyException(notSave, notSave.size()+" keys repeat."))) {
-                                // TODO: 1/2/2019
-                                // 处理重复的key
+                                saveTranslateToFile(notSave, getLocalFile(workConfig, lastLocal),
+                                        workConfig.getOutType(), false);
                             }
                         }
                     } catch (IOException e) {
@@ -128,19 +129,24 @@ public class Addit {
         }
     }
 
-    private List<Translate> saveTranslateToFile(List<Translate> localAllTranslates, File localFile, GlobalConstant.OutType outType) throws IOException {
-        List<Translate> notSaveTranslateList = new ArrayList<>();
+    private List<Translate> saveTranslateToFile(List<Translate> localAllTranslates, File localFile, GlobalConstant.OutType outType, boolean cover) throws IOException {
+        List<Translate> notSaveTranslateList = null;
+        if(!cover) {
+            notSaveTranslateList = new ArrayList<>();
+        }
+
         if(!localFile.exists()) {
             if(!localFile.getParentFile().exists())
                 localFile.getParentFile().mkdirs();
             localFile.createNewFile();
         }
         List<String> lines = IOUtil.readText(localFile, null);
-        if(lines.isEmpty()) {
-            addTranslateStartAndEndToList(lines, outType);
+        if(lines.isEmpty() && outType == GlobalConstant.OutType.TYPE_JSON) {
+            lines.add("{");
+            lines.add("}");
         }
         for (Translate translate : localAllTranslates) {
-            if(!insertStringToListOnLastSameIndex(lines, translateToLineString(translate, outType), getDivisionChar(outType))) {
+            if(!insertStringToListOnLastSameIndex(lines, translateToLineString(translate, outType), getDivisionCharByType(outType), cover)) {
                 notSaveTranslateList.add(translate);
             }
         }
@@ -152,7 +158,7 @@ public class Addit {
         return notSaveTranslateList;
     }
 
-    private Character getDivisionChar(GlobalConstant.OutType outType) {
+    private Character getDivisionCharByType(GlobalConstant.OutType outType) {
         switch (outType) {
             case TYPE_JSON:
                 return ':';
@@ -163,7 +169,7 @@ public class Addit {
         }
     }
 
-    private boolean insertStringToListOnLastSameIndex(List<String> lines, String s, Character limitChar) {
+    private boolean insertStringToListOnLastSameIndex(List<String> lines, String s, Character limitChar, boolean cover) {
         int lastSameIndex = lines.size();
         int lastSameLen = 0;
         int cIndex;
@@ -175,7 +181,11 @@ public class Addit {
                     break;
                 }
                 if(limitChar != null && line.charAt(cIndex) == limitChar) {
-                    return false;
+                    if(!cover) {
+                        return false;
+                    }
+                    lines.set(i, s);
+                    return true;
                 }
             }
             if(cIndex >= lastSameLen) {
@@ -189,27 +199,13 @@ public class Addit {
 
     private String translateToLineString(Translate translate, GlobalConstant.OutType outType) {
         String key = translate.getKey().trim();
-        String translateText = translate.getTranslate().trim();
+        String translateText = translate.getTranslate().replace("\"", "\\\"").trim();
+        translateText = translateText;
         switch (outType) {
             case TYPE_JSON:
-                key = key.replace("\"", "\\\"");
-                translateText = translateText.replace("\"", "\\\"");
                 return "\t\""+key+"\":\""+translateText+"\",";
             case TYPE_PRO:
-                return translate.getKey().trim()+"=\""+translate.getTranslate().trim()+"\"";
-            default:
-                throw new IllegalArgumentException("unknown type of out.");
-        }
-    }
-
-    private void addTranslateStartAndEndToList(List<String> lines, GlobalConstant.OutType outType) {
-        switch (outType) {
-            case TYPE_JSON:
-                lines.add("{");
-                lines.add("}");
-                break;
-            case TYPE_PRO:
-                break;
+                return key+"=\""+translateText+"\"";
             default:
                 throw new IllegalArgumentException("unknown type of out.");
         }
@@ -319,7 +315,7 @@ public class Addit {
         List<Translate> translateList = workConfig.getTranslateList();
         if(excelContent.size() > 0) {
             if(columnPosition == null) {
-                columnPosition = getSuitablePosition(excelContent,
+                columnPosition = calcColumnPosition(excelContent,
                         workConfig.getVertical(),
                         workConfig.getKeyColumn(),
                         workConfig.getLocalColumn(),
@@ -343,6 +339,7 @@ public class Addit {
                     translate.setKey(key);
                     translate.setLocal(local);
                     translate.setTranslate(translateText);
+                    if(translate.getTranslate().equals("[N/A]")) continue;
                     translateList.add(translate);
                 }
             } else {
@@ -359,6 +356,7 @@ public class Addit {
                     translate.setKey(key);
                     translate.setLocal(local);
                     translate.setTranslate(translateText);
+                    if(translate.getTranslate().equals("[N/A]")) continue;
                     translateList.add(translate);
                 }
             }
@@ -367,8 +365,8 @@ public class Addit {
         }
     }
 
-    private ColumnPosition getSuitablePosition(List<List<String>> excelContent, Boolean vertical,
-                                               Integer keyColumn, Integer localColumn, Integer translateColumn) {
+    private ColumnPosition calcColumnPosition(List<List<String>> excelContent, Boolean vertical,
+                                              Integer keyColumn, Integer localColumn, Integer translateColumn) {
 
         if(excelContent == null || excelContent.isEmpty()
                 || excelContent.size() < 3 && excelContent.get(0).size() < 3) {
@@ -506,10 +504,10 @@ public class Addit {
         for (int i=0; i<right; ++i) {
             strSource = strings.get(i);
             strCompared = strings.get(i+1);
-            if(sourceFiles.isEmpty() || strCompared.isEmpty()) {
+            if(strSource.isEmpty() || strCompared.isEmpty()) {
                 continue;
             }
-            if(!isSimilar(strSource, strCompared, 10, strSource.length())) {
+            if(!StringUtil.isSimilar(strSource, strCompared, 10, strSource.length())) {
                 ++count;
             }
         }
@@ -527,58 +525,6 @@ public class Addit {
             }
         }
         return 1.0f * count / strings.size();
-    }
-
-    /**
-     * 判断两个字符串相似度,可设置level
-     * @param strSource 原字符串
-     * @param strCompared 比较字符串
-     * @param level 评分阀值
-     * @param moreCount 比较字符串比原字符串多多少个限制
-     * @return
-     */
-    public static Boolean isSimilar(String strSource,String strCompared, int level,int moreCount){
-        if(strCompared.length()-strSource.length()>moreCount){
-            return false;
-        }
-        int count=strSource.length();
-        int maxSameCount=0;
-        //遍历count次
-        for(int i=0;i<count;i++){
-            int nowSameCount=0;
-            int c=0;
-            int lastIndex=0;//记录上一次匹配的目标索引
-            //遍历每一次的原字符串所有字段
-            for(int j=i;j<strSource.length();j++){
-                char charSource=strSource.charAt(j);
-                for(;c<strCompared.length();c++){
-                    char charCompare=strCompared.charAt(c);
-                    if(charSource==charCompare){
-                        nowSameCount++;
-                        lastIndex=++c;//如果匹配,手动加1
-                        break;
-                    }
-                }
-                c=lastIndex;//遍历完目标字符串,记录当前匹配索引
-            }
-            if(nowSameCount>maxSameCount){
-                maxSameCount=nowSameCount;
-            }
-        }
-        //大于原字符串数量的情况
-        if(maxSameCount>count){
-            maxSameCount=count-(maxSameCount-count);
-        }
-        double dLv= (double)100*maxSameCount/count;
-        int iLv=10*maxSameCount/count*10;
-        int cha=(int)dLv-iLv;
-        int yu=cha>5?1:0;
-        iLv+=yu*10;
-        if(iLv/10>=level){
-            return true;
-        }else{
-            return false;
-        }
     }
 
     public static WorkConfig getDefaultWorkConfig() {
