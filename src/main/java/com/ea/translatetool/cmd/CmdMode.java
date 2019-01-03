@@ -2,8 +2,9 @@ package com.ea.translatetool.cmd;
 
 import com.ea.translatetool.App;
 import com.ea.translatetool.addit.Addit;
+import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.addit.WorkCallback;
-import com.ea.translatetool.addit.exception.RepeatingKeyException;
+import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
 import com.ea.translatetool.addit.mode.Translate;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
@@ -35,30 +36,9 @@ public class CmdMode {
     private CmdMode(App app) {
         this.app = app;
         translates = new ArrayList<Translate>();
+        workConfig = AdditAssist.createWorkConfig(app.getAppConfig());
         exitStatus = 1;
         addShutdownHandler();
-        initWorkConfig();
-    }
-
-    private void initWorkConfig() {
-        workConfig = Addit.getDefaultWorkConfig();
-        workConfig.setLocalMap(app.loadLocalMap(app.getAppConfig().getLocalMapFilePath()));
-        workConfig.setFilePrefix(app.getAppConfig().getFilePrefix());
-        workConfig.setFileSuffix(app.getAppConfig().getFileSuffix());
-        List<File> inputPaths = new ArrayList<>();
-        for (String path : app.getAppConfig().getInPath()) {
-            File file = new File(path);
-            if(file.exists()) {
-                inputPaths.add(file);
-            }
-        }
-        workConfig.setInput(inputPaths);
-
-        File outPath = new File(app.getAppConfig().getOutPath());
-        if(outPath.exists()) {
-            workConfig.setOutput(outPath);
-        }
-
     }
 
     public synchronized static void start(App app, String[] args) {
@@ -101,13 +81,19 @@ public class CmdMode {
 
             @Override
             public boolean onError(Throwable t) {
-                if(t instanceof RepeatingKeyException) {
-                    // TODO: 1/2/2019
-                    // List<Translate> repeatList = ((RepeatingKeyException)t).getRepeatList();
-                    // LoggerUtil.info(repeatList.toString());
-                    return false;
+                if(t instanceof AlreadyExistKeyException) {
+                    if(app.getAppConfig().isCoverKey()) {
+                        return false;
+                    }
+                    try {
+                        AdditAssist.saveKeyExistTranslate(((AlreadyExistKeyException)t).getExistList(),
+                                AdditAssist.createExistKeySaveFile(app.getAppConfig()));
+                    } catch (IOException e) {
+                        LoggerUtil.error(e.getMessage());
+                    }
+                    return true;
                 } else {
-                   // LoggerUtil.exceptionLog(t);
+                    LoggerUtil.exceptionLog(t);
                     return true;
                 }
             }

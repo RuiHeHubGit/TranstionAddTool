@@ -2,6 +2,7 @@ package com.ea.translatetool.ui;
 
 import com.ea.translatetool.App;
 import com.ea.translatetool.addit.Addit;
+import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
@@ -71,10 +72,7 @@ public class UI extends JFrame {
         ui = new UI(app);
         ui.initUI();
         ui.addShutdownHandler();
-        ui.workConfig = Addit.getDefaultWorkConfig();
-        ui.workConfig.setLocalMap(app.loadLocalMap(app.getAppConfig().getLocalMapFilePath()));
-        ui.workConfig.setFilePrefix(app.getAppConfig().getFilePrefix());
-        ui.workConfig.setFileSuffix(app.getAppConfig().getFileSuffix());
+        ui.workConfig = AdditAssist.createWorkConfig(app.getAppConfig());
     }
 
     private void initUI() {

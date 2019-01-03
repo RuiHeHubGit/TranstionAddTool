@@ -10,7 +10,6 @@ import com.ea.translatetool.util.LoggerUtil;
 import com.ea.translatetool.util.PID;
 import com.ea.translatetool.util.WindowTool;
 
-import java.util.HashMap;
 import java.util.Properties;
 
 public class App {
@@ -37,13 +36,6 @@ public class App {
             loadAppConfig();
         }
         return appConfig;
-    }
-
-    public HashMap<String, String> loadLocalMap(String localMapFilePath) {
-        ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
-        Properties properties = new Properties();
-        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, localMapFilePath);
-        return configRepository.load(HashMap.class, properties);
     }
 
     private void loadAppConfig() {
