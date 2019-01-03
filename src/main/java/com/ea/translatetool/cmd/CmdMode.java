@@ -65,7 +65,7 @@ public class CmdMode {
                 if(stage.getIndex() == 1) {
                     System.out.println("start ..");
                 }
-                System.out.println(stage.getName());
+                System.out.println(stage.getName()+" ("+stage.getIndex()+"/"+stage.getCount()+")");
             }
 
             @Override

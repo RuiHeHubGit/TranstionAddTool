@@ -15,7 +15,7 @@ public interface GlobalConstant {
         String OUT_PATH = "translateFiles/";
         String FILE_PREFIX = "";
         String FILE_SUFFIX = "";
-        boolean IS_COVER_KEY = false;
+        boolean IS_COVER_KEY = true;
     }
 
     enum Orientation {

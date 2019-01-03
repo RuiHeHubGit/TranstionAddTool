@@ -232,6 +232,7 @@ public class Addit {
             sourceFiles = new ArrayList<>();
         }
         sourceFiles.clear();
+        int i = 0;
         for (final File file : inputPathList) {
             List<File> files =  IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
                 @Override
@@ -246,6 +247,13 @@ public class Addit {
                 }
             });
             sourceFiles.addAll(files);
+            if(callback != null) {
+                callback.onProgress(++i, sourceFiles.size());
+            }
+        }
+
+        if(callback != null) {
+            callback.onProgress(sourceFiles.size(), sourceFiles.size());
         }
 
         if(sourceFiles.isEmpty()) {
