@@ -317,7 +317,7 @@ public class Addit {
             if(columnPosition == null) {
                 columnPosition = AdditAssist.calcColumnPosition(excelContent,
                         workConfig.getVertical(),
-                        workConfig.getKeyColumn(),
+                        workConfig.getKey(),
                         workConfig.getLocalColumn(),
                         workConfig.getTranslateColumn());
                 if(columnPosition == null) {
@@ -328,7 +328,7 @@ public class Addit {
 
             if (columnPosition.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
                 for (List<String> row : excelContent) {
-                    String key = row.get(columnPosition.getKeyColumn());
+                    String key = columnPosition.getKey();
                     String local = row.get(columnPosition.getLocalColumn());
                     String translateText = row.get(columnPosition.getTranslateColumn());
                     if(localMap.containsKey(local)) {
@@ -345,7 +345,7 @@ public class Addit {
             } else {
                 List<String> columns = excelContent.get(0);
                 for (int i = 0; i<columns.size(); ++i) {
-                    String key = excelContent.get(columnPosition.getKeyColumn()).get(i);
+                    String key = columnPosition.getKey();
                     String local = excelContent.get(columnPosition.getLocalColumn()).get(i);
                     String translateText = excelContent.get(columnPosition.getTranslateColumn()).get(i);
                     if(localMap.containsKey(local)) {

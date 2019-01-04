@@ -33,7 +33,7 @@ public class App {
     }
 
     private void start(String[] args) {
-        if(needStartWithUI()) {
+        if(!needStartWithUI()) {
             UI.start(this);
         } else {
             CmdMode.start(this, args);

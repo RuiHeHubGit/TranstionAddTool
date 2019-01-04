@@ -4,17 +4,18 @@ package com.ea.translatetool.addit.mode;
  * Created by HeRui on 2018/12/24.
  */
 public class ColumnPosition {
-    private int keyColumn;
+    private String key;
     private int localColumn;
     private int translateColumn;
     private int orientation;
 
-    public int getKeyColumn() {
-        return keyColumn;
+
+    public String getKey() {
+        return key;
     }
 
-    public void setKeyColumn(int keyColumn) {
-        this.keyColumn = keyColumn;
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public int getLocalColumn() {
@@ -39,15 +40,5 @@ public class ColumnPosition {
 
     public void setOrientation(int orientation) {
         this.orientation = orientation;
-    }
-
-    @Override
-    public String toString() {
-        return "ColumnPosition{" +
-                "keyColumn=" + keyColumn +
-                ", localColumn=" + localColumn +
-                ", translateColumn=" + translateColumn +
-                ", orientation=" + orientation +
-                '}';
     }
 }

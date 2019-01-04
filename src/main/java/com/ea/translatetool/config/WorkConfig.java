@@ -18,7 +18,7 @@ public class WorkConfig {
     private File output;
     private GlobalConstant.OutType outType;
     private Boolean vertical;
-    private Integer keyColumn;
+    private String key;
     private Integer localColumn;
     private Integer translateColumn;
     private List<Translate> translateList;
@@ -73,12 +73,12 @@ public class WorkConfig {
         this.vertical = vertical;
     }
 
-    public Integer getKeyColumn() {
-        return keyColumn;
+    public String getKey() {
+        return key;
     }
 
-    public void setKeyColumn(Integer keyColumn) {
-        this.keyColumn = keyColumn;
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public Integer getLocalColumn() {

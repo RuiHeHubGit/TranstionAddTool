@@ -219,7 +219,7 @@ public class CmdMode {
             if (columns.length != 3) {
                 throw new IllegalArgumentException("The -cs or -columns option must is 3 number and separator sign of ','.");
             }
-            config.setKeyColumn(Integer.parseInt(columns[0]));
+            config.setKey(columns[0]);
             config.setLocalColumn(Integer.parseInt(columns[1]));
             config.setTranslateColumn(Integer.parseInt(columns[2]));
         }

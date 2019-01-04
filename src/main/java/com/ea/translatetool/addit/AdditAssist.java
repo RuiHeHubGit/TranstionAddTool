@@ -92,7 +92,7 @@ public class AdditAssist {
 
 
     public static ColumnPosition calcColumnPosition(List<List<String>> excelContent, Boolean vertical,
-                                              Integer keyColumn, Integer localColumn, Integer translateColumn) {
+                                                    String key, Integer localColumn, Integer translateColumn) {
 
         if(excelContent == null || excelContent.isEmpty()
                 || excelContent.size() < 3 && excelContent.get(0).size() < 3) {
@@ -102,81 +102,67 @@ public class AdditAssist {
         int rows = excelContent.size();
         int columns = excelContent.get(0).size();
 
-        ColumnPosition columnPosition = createPositionByParams(rows, columns, vertical, keyColumn, localColumn, translateColumn);
+        ColumnPosition columnPosition = createPositionByParams(rows, columns, vertical, key, localColumn, translateColumn);
         if(columnPosition != null) {
             return columnPosition;
         }
 
-        float maxKeySameLv = 0.5f, maxLocalSameLv = 0.5f, maxTranslateSameLv = 0.5f;
-        float keySameLv, localSameLv, listDisperseLv;
+        key = calcKey(excelContent);
+        if(key == null) return null;
+
+
+        float maxLocalSameLv = 0.5f, maxTranslateSameLv = 0.5f;
+        float localSameLv, listDisperseLv;
         for (int i=0; i<rows; ++i) {
-            keySameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_KEY);
             localSameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_LOCAL);
 
-            if(keySameLv >= localSameLv && keySameLv >= maxKeySameLv) {
-                if(calcListNotSimilarLevel(excelContent.get(i)) > 0.1) {
-                    maxKeySameLv = keySameLv;
-                    keyColumn = i;
-                }
-            }
-
-            if(localSameLv >= keySameLv && localSameLv >= maxLocalSameLv) {
+            if(localSameLv >= maxLocalSameLv) {
                 maxLocalSameLv = localSameLv;
                 localColumn = i;
             }
 
-            if(keySameLv > 0.9 || localSameLv > 0.9) continue;
+            if(localSameLv > 0.9) continue;
 
             listDisperseLv = calcListNotSimilarLevel(excelContent.get(i));
-            if(listDisperseLv >= keySameLv && listDisperseLv >= localSameLv && listDisperseLv >= maxTranslateSameLv) {
+            if(listDisperseLv >= localSameLv && listDisperseLv >= maxTranslateSameLv) {
                 maxTranslateSameLv = listDisperseLv;
                 translateColumn = i;
             }
         }
 
-        float maxKeySameLvH = 0.5f, maxLocalSameLvH = 0.5f, maxTranslateLvH = 0.5f;
-        int keyColumnH = 0, localColumnH = 0, translateColumnH = 0;
+        float maxLocalSameLvH = 0.5f, maxTranslateLvH = 0.5f;
+        int localColumnH = 0, translateColumnH = 0;
         List<String> columnContents = new ArrayList<>();
         for (int i=0; i<columns; ++i) {
             columnContents.clear();
             for (int j=0; j<rows; ++j) {
                 columnContents.add(excelContent.get(j).get(i));
             }
-            keySameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_KEY);
             localSameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_LOCAL);
 
-            if(keySameLv >= localSameLv && keySameLv >= maxKeySameLvH) {
-                if(calcListNotSimilarLevel(columnContents) > 0.1) {
-                    maxKeySameLvH = keySameLv;
-                    keyColumnH = i;
-                }
-            }
-
-            if(localSameLv >= keySameLv && localSameLv >= maxLocalSameLvH) {
+            if(localSameLv >= maxLocalSameLvH) {
                 maxLocalSameLvH = localSameLv;
                 localColumnH = i;
             }
 
-            if(keySameLv > 0.9 || localSameLv > 0.9) continue;
+            if(localSameLv > 0.9) continue;
 
             listDisperseLv = calcListNotSimilarLevel(columnContents);
-            if(listDisperseLv >= keySameLv && listDisperseLv >= localSameLv && listDisperseLv >= maxTranslateLvH) {
+            if(listDisperseLv >= localSameLv && listDisperseLv >= maxTranslateLvH) {
                 maxTranslateLvH = listDisperseLv;
                 translateColumnH = i;
             }
         }
 
-        if(maxKeySameLv < 0.5 || maxLocalSameLv < 0.5 || maxTranslateSameLv < 0.5) {
-            maxKeySameLv = maxLocalSameLv = maxTranslateSameLv = 0;
+        if(maxLocalSameLv < 0.5 || maxTranslateSameLv < 0.5) {
+            maxLocalSameLv = maxTranslateSameLv = 0;
         }
 
-        if(maxKeySameLvH >= 0.5 && maxLocalSameLvH >= 0.5 && maxTranslateLvH >= 0.5) {
-            if(maxKeySameLvH + maxLocalSameLvH + maxTranslateLvH > maxKeySameLv + maxLocalSameLv + maxTranslateSameLv) {
+        if(maxLocalSameLvH >= 0.5 && maxTranslateLvH >= 0.5) {
+            if(maxLocalSameLvH + maxTranslateLvH > maxLocalSameLv + maxTranslateSameLv) {
                 vertical = false;
-                keyColumn = keyColumnH;
                 localColumn = localColumnH;
                 translateColumn = translateColumnH;
-                maxKeySameLv = maxLocalSameLvH;
                 maxLocalSameLv = maxLocalSameLvH;
                 maxTranslateSameLv = maxTranslateLvH;
             }
@@ -184,7 +170,7 @@ public class AdditAssist {
             vertical = true;
         }
 
-        if(maxKeySameLv < 0.5 || maxLocalSameLv < 0.5 || maxTranslateSameLv < 0.5) {
+        if(maxLocalSameLv < 0.5 || maxTranslateSameLv < 0.5) {
             return null;
         }
 
@@ -193,31 +179,61 @@ public class AdditAssist {
             columnPosition.setTranslateColumn(GlobalConstant.Orientation.VERTICAL.ordinal());
         else
             columnPosition.setOrientation(GlobalConstant.Orientation.HORIZONTAL.ordinal());
-        columnPosition.setKeyColumn(keyColumn);
+        columnPosition.setKey(key);
         columnPosition.setLocalColumn(localColumn);
         columnPosition.setTranslateColumn(translateColumn);
         return columnPosition;
     }
 
-    public static ColumnPosition createPositionByParams(int rows, int columns,Boolean vertical, Integer keyColumn, Integer localColumn, Integer translateColumn) {
-        if(keyColumn != null && localColumn != null && translateColumn != null) {
+    public static ColumnPosition createPositionByParams(int rows, int columns, Boolean vertical, String key, Integer localColumn, Integer translateColumn) {
+
+        if(key != null && localColumn != null && translateColumn != null) {
             if (vertical != null && vertical && rows >= 3
-                    && keyColumn < rows && localColumn < rows && translateColumn < rows
+                    && localColumn < rows && translateColumn < rows
                     || (vertical == null || !vertical) && columns >= 3
-                    && keyColumn < columns && localColumn < columns && translateColumn < columns) {
+                    && localColumn < columns && translateColumn < columns) {
+
+                if(key == null) return null;
 
                 ColumnPosition columnPosition = new ColumnPosition();
                 if(vertical == null || !vertical)
                     columnPosition.setTranslateColumn(GlobalConstant.Orientation.HORIZONTAL.ordinal());
                 else
                     columnPosition.setOrientation(GlobalConstant.Orientation.VERTICAL.ordinal());
-                columnPosition.setKeyColumn(keyColumn);
+                columnPosition.setKey(key);
                 columnPosition.setLocalColumn(localColumn);
                 columnPosition.setTranslateColumn(translateColumn);
                 return columnPosition;
             }
         }
         return null;
+    }
+
+    private static String calcKey(List<List<String>> excelContent) {
+
+        HashMap<String, Integer> sameMap = new HashMap<>();
+        Integer maxCount = 0;
+        String mostSameString = null;
+        for (int i= 0; i<excelContent.size(); ++i) {
+            List<String> row = excelContent.get(i);
+            for (int j=0; j<row.size(); ++j) {
+                Pattern pattern = Pattern.compile(GlobalConstant.REGEX_KEY);
+                String value = row.get(j);
+                if(pattern.matcher(value).matches()) {
+                    if(!sameMap.containsKey(value)) {
+                        sameMap.put(value, 1);
+                    } else {
+                        Integer count = sameMap.get(value);
+                        sameMap.put(value, ++count);
+                        if(count > maxCount) {
+                            maxCount = count;
+                            mostSameString = value;
+                        }
+                    }
+                }
+            }
+        }
+        return mostSameString;
     }
 
     public static float calcListNotSimilarLevel(List<String> strings) {
