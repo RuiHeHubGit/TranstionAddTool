@@ -19,8 +19,8 @@ public class ExcelUtil {
 
     public static final int Excel2003 = 0;
     public static final int Excel2007 = 1;
-    public static final String  SUFFIX_XLS = "xls";
-    public static final String  SUFFIX_XLSX = "xlsx";
+    public static final String  SUFFIX_XLS = ".xls";
+    public static final String  SUFFIX_XLSX = ".xlsx";
 
     public static Workbook getWorkbook(File file) throws IOException {
         int edition = -1;

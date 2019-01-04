@@ -1,17 +1,17 @@
 package com.ea.translatetool.addit.exception;
 
-import com.ea.translatetool.addit.mode.Translate;
+import com.ea.translatetool.addit.mode.Translation;
 
 import java.util.List;
 
 public class AlreadyExistKeyException extends Exception{
-    List<Translate> existList;
-    public AlreadyExistKeyException(List<Translate> repeatList, String msg) {
+    List<Translation> existList;
+    public AlreadyExistKeyException(List<Translation> repeatList, String msg) {
         super(msg);
         this.existList = repeatList;
     }
 
-    public List<Translate> getExistList() {
+    public List<Translation> getExistList() {
         return existList;
     }
 }

@@ -5,7 +5,8 @@ import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
-import com.ea.translatetool.addit.mode.Translate;
+import com.ea.translatetool.addit.mode.Translation;
+import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
@@ -20,7 +21,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Pattern;
+
+import static com.ea.translatetool.util.ExcelUtil.SUFFIX_XLS;
+import static com.ea.translatetool.util.ExcelUtil.SUFFIX_XLSX;
 
 /**
  * Created by HeRui on 2018/12/22.
@@ -29,13 +35,13 @@ public class CmdMode {
     private App app;
     private static CmdMode cmdMode;
     private Options opts = new Options();
-    private List<Translate> translates;
+    private List<Translation> translations;
     private WorkConfig workConfig;
     private int exitStatus;
 
     private CmdMode(App app) {
         this.app = app;
-        translates = new ArrayList<Translate>();
+        translations = new ArrayList<Translation>();
         workConfig = AdditAssist.createWorkConfig(app.getAppConfig());
         exitStatus = 1;
         addShutdownHandler();
@@ -86,7 +92,7 @@ public class CmdMode {
                         return false;
                     }
                     try {
-                        AdditAssist.saveKeyExistTranslate(((AlreadyExistKeyException)t).getExistList(),
+                        AdditAssist.saveKeyExistTranslation(((AlreadyExistKeyException)t).getExistList(),
                                 AdditAssist.createExistKeySaveFile(app.getAppConfig()));
                     } catch (IOException e) {
                         LoggerUtil.error(e.getMessage());
@@ -131,8 +137,8 @@ public class CmdMode {
     // 定义命令行参数
     private void definedOptions() {
         opts = new Options();
-        Option optHelp = new Option("h", "help", false,"Help of translate tool");
-        Option optVersion = new Option("v", "version", false,"Look version for translate addi.");
+        Option optHelp = new Option("h", "help", false,"Help of translation tool");
+        Option optVersion = new Option("v", "version", false,"Look version for translation addi.");
         Option optVertical = new Option("vt", "vertical", false,"Set read vertical in excel");
 
         Option optInput = Option.builder("i").longOpt("input")
@@ -144,8 +150,8 @@ public class CmdMode {
         Option optOutputType = Option.builder("ot").longOpt("outType")
                 .hasArg().argName("json or properties").desc("Default value is json").build();
 
-        Option optColumns = Option.builder("cs").longOpt("columns")
-                .hasArgs().argName("number1,number1,number1").valueSeparator(',').desc("key,local,translate").build();
+        Option optColumns = Option.builder("l").longOpt("locator")
+                .hasArgs().argName("rnumber|cnumber,number1,number2,v|h").valueSeparator(',').desc("r or c,local,translation,vertical or horizontal").build();
 
         opts.addOption(optHelp);
         opts.addOption(optVersion);
@@ -214,14 +220,37 @@ public class CmdMode {
             config.setOutput(file);
         }
 
-        if (line.hasOption("cs")) {
-            String[] columns = line.getOptionValues("cs");
-            if (columns.length != 3) {
-                throw new IllegalArgumentException("The -cs or -columns option must is 3 number and separator sign of ','.");
+        if (line.hasOption("l")) {
+            String[] columns = line.getOptionValues("l");
+            boolean pass = false;
+            if (columns.length == 4) {
+                File file = new File(columns[0]);
+                Pattern patternKey = Pattern.compile("[VvRr]\\d{1,3}");
+                Pattern patternNum = Pattern.compile("\\d{1,3}");
+                Pattern patternOri = Pattern.compile("[VvHh]]");
+                String fileName = file.getName().toUpperCase();
+                if(file.exists() && file.isFile() && (fileName.endsWith(SUFFIX_XLS) || fileName.endsWith(SUFFIX_XLSX))
+                        && patternKey.matcher(columns[1]).matches()
+                        && patternNum.matcher(columns[2]).matches()
+                        && patternNum.matcher(columns[3]).matches()
+                        && patternOri.matcher(columns[4]).matches()) {
+
+                    TranslationLocator translationLocator = new TranslationLocator();
+                    translationLocator.setKeyLocator(columns[1]);
+                    translationLocator.setLocalLocator(Integer.parseInt(columns[2]));
+                    translationLocator.setTranslationLocator(Integer.parseInt(columns[3]));
+                    translationLocator.setTranslationLocator("v".equalsIgnoreCase(columns[4])?
+                            GlobalConstant.Orientation.VERTICAL.ordinal():GlobalConstant.Orientation.HORIZONTAL.ordinal());
+                    if(workConfig.getTranslationLocatorMap() == null) {
+                        workConfig.setTranslationLocatorMap(new HashMap<String, TranslationLocator>());
+                    }
+                    workConfig.getTranslationLocatorMap().put(columns[1], translationLocator);
+                }
             }
-            config.setKey(columns[0]);
-            config.setLocalColumn(Integer.parseInt(columns[1]));
-            config.setTranslateColumn(Integer.parseInt(columns[2]));
+
+            if(!pass) {
+                throw new IllegalArgumentException("The -l or -locator option must is like path,rnumber|cnumber,number1,number2,v|h, path is excel file path and exist.");
+            }
         }
 
         if (line.hasOption("ot")) {
@@ -240,10 +269,6 @@ public class CmdMode {
                 stringBuffer.setCharAt(stringBuffer.length()-1, ']');
                 throw new IllegalArgumentException("invalid value on ot, value should in "+stringBuffer.toString());
             }
-        }
-
-        if(line.hasOption("vt")) {
-            config.setVertical(true);
         }
 
         return config;
@@ -301,10 +326,10 @@ public class CmdMode {
     }
 
     private void printKeyList() {
-        if(translates.size() == 0) {
-            System.out.println("not translates");
+        if(translations.size() == 0) {
+            System.out.println("not translations");
         }
-        for (Translate t : translates) {
+        for (Translation t : translations) {
             System.out.println(t);
         }
     }
@@ -359,7 +384,7 @@ public class CmdMode {
     }
 
     private void printInputModeHelp() {
-        System.out.println("add <key,local,translate>; add translate.");
+        System.out.println("add <key,local,translate>; add translation.");
         System.out.println("clear                      clear the screen.");
         System.out.println("del <key>;                 delete key from list.");
         System.out.println("dll                        delete last line of input.");
@@ -367,10 +392,10 @@ public class CmdMode {
         System.out.println("help                       look for help of input mode.");
         System.out.println("i <path1,path2...>;        set source.");
         System.out.println("list                       show the list of keys.");
+        System.out.println("l                          show the list of keys.");
         System.out.println("o <dir>;                   set out dir.");
         System.out.println("ot <[json|xml]>;           set out type,default is json.");
         System.out.println("start                      start do work.");
-        System.out.println("vt [true|false];           set vertical. empty value same true");
     }
 
 

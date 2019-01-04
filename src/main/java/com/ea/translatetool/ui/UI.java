@@ -91,7 +91,7 @@ public class UI extends JFrame {
                                 return false;
                             }
                             try {
-                                AdditAssist.saveKeyExistTranslate(((AlreadyExistKeyException) t).getExistList(),
+                                AdditAssist.saveKeyExistTranslation(((AlreadyExistKeyException) t).getExistList(),
                                         AdditAssist.createExistKeySaveFile(app.getAppConfig()));
                             } catch (IOException e) {
                                 LoggerUtil.error(e.getMessage());

@@ -1,7 +1,7 @@
 package com.ea.translatetool.config;
 
-import com.ea.translatetool.addit.mode.ColumnPosition;
-import com.ea.translatetool.addit.mode.Translate;
+import com.ea.translatetool.addit.mode.TranslationLocator;
+import com.ea.translatetool.addit.mode.Translation;
 import com.ea.translatetool.constant.GlobalConstant;
 
 import java.io.File;
@@ -17,13 +17,9 @@ public class WorkConfig {
     private List<File> input;
     private File output;
     private GlobalConstant.OutType outType;
-    private Boolean vertical;
-    private String key;
-    private Integer localColumn;
-    private Integer translateColumn;
-    private List<Translate> translateList;
+    private List<Translation> translationList;
     private HashMap<String, String> localMap;
-    private HashMap<String, ColumnPosition> columnPositionMap;
+    private HashMap<String, TranslationLocator> translationLocatorMap;
 
     public String getFilePrefix() {
         return filePrefix;
@@ -65,44 +61,12 @@ public class WorkConfig {
         this.outType = outType;
     }
 
-    public Boolean getVertical() {
-        return vertical;
+    public List<Translation> getTranslationList() {
+        return translationList;
     }
 
-    public void setVertical(Boolean vertical) {
-        this.vertical = vertical;
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public Integer getLocalColumn() {
-        return localColumn;
-    }
-
-    public void setLocalColumn(Integer localColumn) {
-        this.localColumn = localColumn;
-    }
-
-    public Integer getTranslateColumn() {
-        return translateColumn;
-    }
-
-    public void setTranslateColumn(Integer translateColumn) {
-        this.translateColumn = translateColumn;
-    }
-
-    public List<Translate> getTranslateList() {
-        return translateList;
-    }
-
-    public void setTranslateList(List<Translate> translateList) {
-        this.translateList = translateList;
+    public void setTranslationList(List<Translation> translationList) {
+        this.translationList = translationList;
     }
 
     public HashMap<String, String> getLocalMap() {
@@ -113,11 +77,11 @@ public class WorkConfig {
         this.localMap = localMap;
     }
 
-    public HashMap<String, ColumnPosition> getColumnPositionMap() {
-        return columnPositionMap;
+    public HashMap<String, TranslationLocator> getTranslationLocatorMap() {
+        return translationLocatorMap;
     }
 
-    public void setColumnPositionMap(HashMap<String, ColumnPosition> columnPositionMap) {
-        this.columnPositionMap = columnPositionMap;
+    public void setTranslationLocatorMap(HashMap<String, TranslationLocator> translationLocatorMap) {
+        this.translationLocatorMap = translationLocatorMap;
     }
 }
