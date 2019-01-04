@@ -12,6 +12,7 @@ import com.ea.translatetool.ui.tabs.InputTab;
 import com.ea.translatetool.ui.tabs.OutputTab;
 import com.ea.translatetool.ui.tabs.SettingTab;
 import com.ea.translatetool.util.LoggerUtil;
+import com.ea.translatetool.util.PID;
 import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowTool;
 
@@ -110,10 +111,13 @@ public class UI extends JFrame {
     }
 
     private static void init(App app) {
-        WindowTool windowTool = WindowTool.getInstance();
-        windowTool.setWindowText(windowTool.getCmdHwnd(), "translate tool cmd");
-    //    windowTool.enableSystemMenu(WindowTool.SC_CLOSE, false);
-    //    windowTool.setCmdShow(false);
+        if(PID.isStartWithContain("cmd.exe")) {
+            WindowTool windowTool = WindowTool.getInstance();
+            windowTool.setWindowText(windowTool.getCmdHwnd(), "translate tool cmd");
+            windowTool.enableSystemMenu(WindowTool.SC_CLOSE, false);
+            windowTool.setCmdShow(false);
+        }
+
         ui = new UI(app);
         ui.initUI();
         ui.addShutdownHandler();
@@ -130,26 +134,41 @@ public class UI extends JFrame {
 
     private void initFoodPanel() {
         footPanel = new JPanel();
-        footPanel.setPreferredSize(new Dimension(footPanel.getSize().width, 55));
-        footPanel.setLayout(new BorderLayout(5, 2));
-        footPanel.setBorder(BorderFactory.createMatteBorder(5, 5, 5, 5, (Color) null));
+        footPanel.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+        footPanel.setLayout(new BoxLayout(footPanel, BoxLayout.LINE_AXIS));
+        footPanel.setPreferredSize(new Dimension(footPanel.getSize().width, 35));
         mainContainer.add(footPanel, BorderLayout.SOUTH);
 
-        lbStage = new JLabel(" ");
+        lbStage = new JLabel("", JLabel.RIGHT);
         lbProgress = new JLabel();
         progressBar = new JProgressBar();
         btnStart = new JButton("start");
 
-        lbProgress.setHorizontalAlignment(JLabel.CENTER);
+        progressBar.setMaximumSize(new Dimension(200, (int) btnStart.getPreferredSize().getHeight()));
+        progressBar.setMinimumSize(new Dimension(50, (int) btnStart.getPreferredSize().getHeight()));
 
-        JPanel secondLinePanel = new JPanel();
-        secondLinePanel.setLayout(new BorderLayout(10, 5));
-        secondLinePanel.add(progressBar, BorderLayout.CENTER);
-        secondLinePanel.add(btnStart, BorderLayout.EAST);
+        JPanel progressPanel = new JPanel();
+        progressPanel.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+        progressPanel.setLayout(new BoxLayout(progressPanel, BoxLayout.LINE_AXIS));
+        progressPanel.setMinimumSize(new Dimension(15, (int) btnStart.getPreferredSize().getHeight()));
+        progressPanel.setPreferredSize(new Dimension(750, (int) btnStart.getPreferredSize().getHeight()));
+        progressPanel.setMaximumSize(new Dimension(1200, (int) btnStart.getPreferredSize().getHeight()));
 
-        footPanel.add(lbStage, BorderLayout.WEST);
-        footPanel.add(lbProgress, BorderLayout.CENTER);
-        footPanel.add(secondLinePanel, BorderLayout.SOUTH);
+        progressPanel.add(Box.createHorizontalStrut(20));
+        progressPanel.add(progressBar);
+        progressPanel.add(Box.createHorizontalStrut(10));
+        progressPanel.add(lbProgress);
+        progressPanel.add(Box.createHorizontalStrut(20));
+        progressPanel.add(lbStage);
+
+        Component glue = Box.createHorizontalGlue();
+        glue.setMaximumSize(new Dimension(100, (int) btnStart.getPreferredSize().getHeight()));
+        glue.setMinimumSize(new Dimension(10, (int) btnStart.getPreferredSize().getHeight()));
+
+
+        footPanel.add(glue);
+        footPanel.add(btnStart);
+        footPanel.add(progressPanel);
 
         btnStart.addActionListener(new ActionListener() {
             @Override
@@ -157,7 +176,6 @@ public class UI extends JFrame {
                 doStart();
             }
         });
-
     }
 
     private void initTab() {

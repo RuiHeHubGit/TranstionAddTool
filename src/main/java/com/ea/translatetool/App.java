@@ -12,6 +12,8 @@ import com.ea.translatetool.util.WindowTool;
 
 import java.util.Properties;
 
+import static com.ea.translatetool.constant.GlobalConstant.NEED_UI_START_PRO;
+
 public class App {
     private AppConfig appConfig;
 
@@ -21,8 +23,7 @@ public class App {
             app.loadAppConfig();
             app.start(args);
         } catch (Throwable t) {
-            LoggerUtil.error(t.getMessage());
-            t.printStackTrace();
+            LoggerUtil.exceptionLog(t);
             try {
                 WindowTool windowTool = WindowTool.getInstance();
                 windowTool.enableSystemMenu(WindowTool.SC_CLOSE, true);
@@ -32,11 +33,15 @@ public class App {
     }
 
     private void start(String[] args) {
-        if(PID.isStartWithWindowExplorer()) {
+        if(needStartWithUI()) {
             UI.start(this);
         } else {
             CmdMode.start(this, args);
         }
+    }
+
+    private boolean needStartWithUI() {
+        return PID.isStartWithContain(NEED_UI_START_PRO);
     }
 
     public synchronized AppConfig getAppConfig() {

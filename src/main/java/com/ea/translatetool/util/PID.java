@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.util.regex.Pattern;
 
 public final class PID {
     enum ProcessAttr {
@@ -89,10 +90,25 @@ public final class PID {
      * @return
      */
     public static boolean isStartWithWindowExplorer() {
+        return isStartWithContain("explorer.exe");
+    }
+
+    /**
+     * 判断是否是以指定进程运行的
+     * @param pidNameRegex
+     * @return
+     */
+    public static boolean isStartWithContain(String ... pidNameRegex) {
         String pid = getPID();
         String parentProcessName = getProcessAttr(getProcessAttr(pid, ProcessAttr.PARENT_PROCESS_ID), ProcessAttr.NAME);
-        if("explorer.exe".equals(parentProcessName)) {
-            return true;
+        if(parentProcessName == null || parentProcessName.isEmpty()) {
+            return false;
+        }
+        for (String name : pidNameRegex) {
+            Pattern pattern = Pattern.compile(name);
+            if(pattern.matcher(parentProcessName).matches()) {
+                return true;
+            }
         }
         return false;
     }
