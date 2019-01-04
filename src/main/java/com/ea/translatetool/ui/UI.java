@@ -53,6 +53,10 @@ public class UI extends JFrame {
     }
 
     private void doStart() {
+        if(Addit.isRunning()) {
+            return;
+        }
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -95,6 +99,9 @@ public class UI extends JFrame {
                             return true;
                         } else {
                             LoggerUtil.exceptionLog(t);
+                            if(JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(ui, t.getMessage(), "prompt", JOptionPane.YES_NO_OPTION)){
+                                return false;
+                            }
                             return true;
                         }
                     }

@@ -44,18 +44,21 @@ public class LoggerUtil {
         }
     }
 
-    public static void exceptionLog(Throwable t) {
-        if(t == null) return;
+    public static String exceptionLog(Throwable t) {
+        if(t == null) return null;
+        String msg;
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream printStream = new PrintStream(outputStream);
         t.printStackTrace(printStream);
-        error(outputStream.toString());
+        msg = outputStream.toString();
+        error(msg);
         printStream.close();
         try {
             outputStream.close();
         } catch (IOException e) {
             error(e.getMessage());
         }
+        return msg;
     }
 
     private static boolean canLog(String level) {
