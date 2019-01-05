@@ -321,9 +321,9 @@ public class Addit {
                     && translationLocator.getOrientation() == GlobalConstant.Orientation.VERTICAL.ordinal()) {
                 for (int i=0; i<excelContent.size(); ++i) {
                     List<String> row = excelContent.get(i);
-                    Translation translation = AdditAssist.createTranslation(row, translationLocator, localMap, keys.get(i));
-                    if(translation != null) {
-                        translationList.add(translation);
+                    List<Translation> translations = AdditAssist.getTranslationList(row, translationLocator, localMap, keys.get(i));
+                    if(translations != null) {
+                        translationList.addAll(translations);
                     }
                 }
             } else if(translationLocator.getKeyLocator().startsWith("r")
@@ -334,27 +334,23 @@ public class Addit {
                     for (int j=0; j < excelContent.size(); ++j) {
                         columnTexts.add(excelContent.get(j).get(i));
                     }
-                    Translation translation = AdditAssist.createTranslation(columnTexts, translationLocator, localMap, keys.get(i));
+                    List<Translation> translations = AdditAssist.getTranslationList(columnTexts, translationLocator, localMap, keys.get(i));
                     columnTexts.clear();
-                    if(translation != null) {
-                        translationList.add(translation);
+                    if(translations != null) {
+                        translationList.addAll(translations);
                     }
                 }
             } else {
                 List<String> locals = AdditAssist.getTranslationLocals(excelContent, translationLocator);
-                Translation translation = null;
                 for (int i=0; i<keys.size(); ++i) {
                     for (int j=0; j<locals.size(); ++j) {
-                        String local = localMap.get(locals.get(j));
-                        if(local == null) {
-                            local = locals.get(j);
-                        }
+                        List<Translation> translations = null;
                         if(translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal())
-                            translation = AdditAssist.createTranslation(excelContent, keys.get(i), local, i, j);
+                            translations = AdditAssist.getTranslationList(excelContent, localMap, keys.get(i), locals.get(j), i, j);
                         else
-                            translation = AdditAssist.createTranslation(excelContent, keys.get(i), localMap.get(locals.get(j)), j, i);
-                        if(translation != null) {
-                            translationList.add(translation);
+                            translations = AdditAssist.getTranslationList(excelContent, localMap, keys.get(i), locals.get(j), j, i);
+                        if(translations != null) {
+                            translationList.addAll(translations);
                         }
                     }
                 }

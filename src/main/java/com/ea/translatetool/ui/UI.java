@@ -68,7 +68,10 @@ public class UI extends JFrame {
                         if(stage.getIndex() == 1) {
                             System.out.println("start ..");
                         }
-                        String stageInfo = stage.getName()+" ("+stage.getIndex()+"/"+stage.getCount()+")";
+                        String stageInfo = String.format("\n%d/%d %s start\n",
+                                stage.getIndex(),
+                                stage.getCount(),
+                                stage.getName());
                         System.out.println(stageInfo);
                         lbStage.setText(stageInfo);
                     }
@@ -81,7 +84,10 @@ public class UI extends JFrame {
 
                     @Override
                     public void onDone(WorkStage stage) {
-                        String stageInfo = String.format("\n%s %s\n", stage.getName(),
+                        String stageInfo = String.format("\n%d/%d %s %s\n",
+                                stage.getIndex(),
+                                stage.getCount(),
+                                stage.getName(),
                                 stage.isSuccess()?"finished." : "failed.");
                         System.out.println(stageInfo);
                         lbStage.setText(stageInfo);

@@ -8,6 +8,14 @@ public class Translation {
     private String local;
     private String translation;
 
+    public Translation() {}
+
+    public Translation(String translation, String key, String local) {
+        this.translation = translation;
+        this.key = key;
+        this.local = local;
+    }
+
     public String getKey() {
         return key;
     }

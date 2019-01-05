@@ -304,7 +304,7 @@ public class AdditAssist {
         return locals;
     }
 
-    public static Translation createTranslation(List<String> texts, TranslationLocator translationLocator, HashMap<String, String> localMap, String key) {
+    public static List<Translation> getTranslationList(List<String> texts, TranslationLocator translationLocator, HashMap<String, String> localMap, String key) {
         String local = texts.get(translationLocator.getLocalLocator());
         String translateText = texts.get(translationLocator.getTranslationLocator());
         if(translateText.isEmpty()
@@ -313,19 +313,10 @@ public class AdditAssist {
             return null;
         }
 
-        if(localMap.containsKey(local)) {
-            local = localMap.get(local);
-        }
-
-        Translation translation = new Translation();
-        translation.setKey(key);
-        translation.setLocal(local);
-        translation.setTranslation(translateText);
-
-        return translation;
+        return getTranslationList(key, local, translateText, localMap);
     }
 
-    public static Translation createTranslation(List<List<String>> excelContent, String key, String local, int row, int col) {
+    public static List<Translation> getTranslationList(List<List<String>> excelContent, HashMap<String, String> localMap, String key, String local, int row, int col) {
         String translateText = excelContent.get(row).get(col);
         if(translateText.isEmpty()
                 || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()
@@ -333,11 +324,24 @@ public class AdditAssist {
             return null;
         }
 
-        Translation translation = new Translation();
-        translation.setKey(key);
-        translation.setLocal(local);
-        translation.setTranslation(translateText);
+        return getTranslationList(key, local, translateText, localMap);
+    }
 
-        return translation;
+    private static List<Translation> getTranslationList(String key, String local, String translateText, HashMap<String, String> localMap) {
+        List<Translation> translations = new ArrayList<>();
+        String localStr = localMap.get(local);
+        if(localStr == null) {
+            localStr = local;
+        }
+        String[] localArr = localStr.split(",");
+        for (String l : localArr) {
+            Translation translation = new Translation();
+            translation.setKey(key);
+            translation.setLocal(l.trim());
+            translation.setTranslation(translateText);
+            translations.add(translation);
+        }
+
+        return translations;
     }
 }
