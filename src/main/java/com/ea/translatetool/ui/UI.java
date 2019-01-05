@@ -5,6 +5,7 @@ import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
+import com.ea.translatetool.addit.exception.InvalidExcelContentException;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
 import com.ea.translatetool.config.WorkConfig;
@@ -23,6 +24,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
+import java.util.Locale;
 
 public class UI extends JFrame {
     private static UI ui;
@@ -79,7 +81,8 @@ public class UI extends JFrame {
 
                     @Override
                     public void onDone(WorkStage stage) {
-                        String stageInfo = "\n"+stage.getName()+" finished.\n";
+                        String stageInfo = String.format("\n%s %s\n", stage.getName(),
+                                stage.isSuccess()?"finished." : "failed.");
                         System.out.println(stageInfo);
                         lbStage.setText(stageInfo);
                     }
@@ -99,8 +102,16 @@ public class UI extends JFrame {
                             return true;
                         } else {
                             LoggerUtil.exceptionLog(t);
-                            if(JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(ui, t.getMessage(), "prompt", JOptionPane.YES_NO_OPTION)){
-                                return false;
+                            String msg = t.getMessage();
+                            if (msg == null) msg = "Unknown error.";
+                            if(t instanceof InvalidExcelContentException) {
+                                if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(ui,
+                                        msg + "\nDo you want to continue?", "warning", JOptionPane.YES_NO_OPTION,
+                                        JOptionPane.WARNING_MESSAGE)) {
+                                    return false;
+                                }
+                            } else {
+                                JOptionPane.showMessageDialog(ui, msg, "error", JOptionPane.ERROR_MESSAGE);
                             }
                             return true;
                         }
@@ -111,6 +122,11 @@ public class UI extends JFrame {
     }
 
     private void updateProgressBar(long complete, long total) {
+        if(total == 0) {
+            lbProgress.setText("");
+            progressBar.setValue(0);
+            return;
+        }
         float percent = 100.0f * complete / total;
         lbProgress.setText(String.format(complete+"/"+total+"  %.2f%%", percent));
         progressBar.setValue((int) percent);
@@ -170,7 +186,7 @@ public class UI extends JFrame {
 
         Component glue = Box.createHorizontalGlue();
         glue.setMaximumSize(new Dimension(100, (int) btnStart.getPreferredSize().getHeight()));
-        glue.setMinimumSize(new Dimension(10, (int) btnStart.getPreferredSize().getHeight()));
+        glue.setMinimumSize(new Dimension(20, (int) btnStart.getPreferredSize().getHeight()));
 
 
         footPanel.add(glue);
@@ -202,7 +218,7 @@ public class UI extends JFrame {
         initTheme();
         setTitle("translate tool");
         setIconImage(this.getToolkit().getImage(getClass().getClassLoader().getResource("tools_72px.ico")));
-        setSize(800, 600);
+        setSize(1000, 700);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         this.addWindowListener(new WindowAdapter() {

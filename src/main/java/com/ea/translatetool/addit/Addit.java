@@ -3,8 +3,8 @@ package com.ea.translatetool.addit;
 import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
 import com.ea.translatetool.addit.exception.InvalidExcelContentException;
 import com.ea.translatetool.addit.exception.NotFoundExcelException;
-import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.Translation;
+import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
@@ -16,17 +16,17 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class Addit {
     private volatile static boolean running;
     private static Addit  addit;
-    WorkConfig workConfig;
+    private WorkConfig workConfig;
     private List<Translation> translationList;
     private List<File> sourceFiles;
     private int stage;
     private int stageCount;
     private int mode;
+    private WorkStage workStage;
 
     private Addit() {
         translationList = new ArrayList<>();
@@ -63,20 +63,20 @@ public class Addit {
 
             addit.stage = addit.stageCount;
             addit.doWork(workConfig, callback);
-        } catch (NotFoundExcelException e) {
-            LoggerUtil.error(e.getMessage());
-        } catch (InvalidExcelContentException e) {
-            LoggerUtil.error(e.getMessage());
-        } catch (IOException e) {
+        } catch (Exception e) {
+            addit.workStage.setSuccess(false);
             LoggerUtil.error(e.getMessage());
         } finally {
-            running = false;
+            if(running) {
+                running = false;
+                addit.onDone(callback, addit.workStage);
+            }
         }
     }
 
-    private void doWork(WorkConfig workConfig, WorkCallback callback) {
+    private void doWork(WorkConfig workConfig, WorkCallback callback) throws IOException {
 
-        WorkStage workStage =new WorkStage(mode, stage, stageCount, 3, "add translate to file", "", new Date(), null);
+        workStage = new WorkStage(mode, stage, stageCount, 3, "add translate to file", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
@@ -104,10 +104,12 @@ public class Addit {
                                         workConfig.getOutType(), false);
                             }
                         }
+                        workStage.setSuccess(true);
                     } catch (IOException e) {
-                        if(callback != null && callback.onError(e)) {
-                            return;
+                        if(callback != null) {
+                            callback.onError(e);
                         }
+                        throw e;
                     }
                     localAllTranslations.clear();
                 }
@@ -122,11 +124,8 @@ public class Addit {
         if(callback != null) {
             callback.onProgress(total, total);
         }
-        if(callback != null) {
-            workStage.setEnd(new Date());
-            callback.onDone(workStage);
-        }
         workConfig.getTranslationList().clear();
+        onDone(callback, workStage);
     }
 
     private List<Translation> saveTranslateToFile(List<Translation> localAllTranslations, File localFile, GlobalConstant.OutType outType, boolean cover) throws IOException {
@@ -200,7 +199,6 @@ public class Addit {
     private String translateToLineString(Translation translation, GlobalConstant.OutType outType) {
         String key = translation.getKey().trim();
         String translateText = translation.getTranslation().replace("\"", "\\\"").trim();
-        translateText = translateText;
         switch (outType) {
             case TYPE_JSON:
                 return "\t\""+key+"\":\""+translateText+"\",";
@@ -226,7 +224,7 @@ public class Addit {
 
     public void loadTranslateFiles(WorkConfig workConfig, WorkCallback callback) throws NotFoundExcelException, IOException {
         List<File> inputPathList = workConfig.getInput();
-        WorkStage workStage =  new WorkStage(mode, stage, stageCount, 3, "load files", "", new Date(), null);
+        workStage =  new WorkStage(mode, stage, stageCount, 3, "load files", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
@@ -260,20 +258,15 @@ public class Addit {
 
         if(sourceFiles.isEmpty()) {
             NotFoundExcelException exception = new NotFoundExcelException("Not found file of excel in the specific path.");
-            if(callback != null && callback.onError(exception)) {
-                throw exception;
-            } else {
-                throw exception;
-            }
+            if(callback != null) callback.onError(exception);
+            throw exception;
         }
-        if(callback != null) {
-            workStage.setEnd(new Date());
-            callback.onDone(workStage);
-        }
+        
+        onDone(callback, workStage);
     }
 
     private void loadAllTranslate(WorkConfig workConfig, WorkCallback callback) throws IOException, InvalidExcelContentException {
-        WorkStage workStage = new WorkStage(mode, stage, stageCount, 3, "load translate", "", new Date(), null);
+        workStage = new WorkStage(mode, stage, stageCount, 3, "load translate", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
@@ -287,7 +280,7 @@ public class Addit {
             try {
                 parseTranslateFile(workConfig, sourceFiles.get(i));
             } catch (Exception e) {
-                if(callback != null && callback.onError(e)) {
+                if(null != callback && callback.onError(e)) {
                     throw e;
                 } else {
                     throw e;
@@ -302,10 +295,8 @@ public class Addit {
         if(callback != null) {
             callback.onProgress(sourceFiles.size(), sourceFiles.size());
         }
-        if(callback != null) {
-            workStage.setEnd(new Date());
-            callback.onDone(workStage);
-        }
+        workStage.setSuccess(true);
+        onDone(callback, workStage);
     }
 
     private void parseTranslateFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
@@ -319,17 +310,15 @@ public class Addit {
             if(translationLocator == null) {
                 translationLocator = AdditAssist.calcTranslationLocator(excelContent, translationLocatorMap.get(file.getAbsolutePath()));
                 if(translationLocator == null) {
-                    throw new InvalidExcelContentException(file.getAbsolutePath());
+                    throw new InvalidExcelContentException("parse failed:"+file.getAbsolutePath());
                 }
                 translationLocatorMap.put(file.getAbsolutePath(), translationLocator);
             }
 
-            String singleKey = AdditAssist.getSingleKey(excelContent);
-            if(singleKey == null) {
-                throw new InvalidExcelContentException(file.getAbsolutePath());
-            }
-            List<String> keys = AdditAssist.getTranslationKeys(excelContent, translationLocator.getKeyLocator(), singleKey);
-            if (translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
+            List<String> keys = AdditAssist.getTranslationKeys(excelContent, translationLocator.getKeyLocator());
+
+            if (translationLocator.getKeyLocator().startsWith("c")
+                    && translationLocator.getOrientation() == GlobalConstant.Orientation.VERTICAL.ordinal()) {
                 for (int i=0; i<excelContent.size(); ++i) {
                     List<String> row = excelContent.get(i);
                     Translation translation = AdditAssist.createTranslation(row, translationLocator, localMap, keys.get(i));
@@ -337,7 +326,8 @@ public class Addit {
                         translationList.add(translation);
                     }
                 }
-            } else {
+            } else if(translationLocator.getKeyLocator().startsWith("r")
+                    && translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
                 int columns = excelContent.get(0).size();
                 List<String> columnTexts = new ArrayList<>();
                 for (int i = 0; i<columns; ++i) {
@@ -350,9 +340,27 @@ public class Addit {
                         translationList.add(translation);
                     }
                 }
+            } else {
+                List<String> locals = AdditAssist.getTranslationLocals(excelContent, translationLocator);
+                Translation translation = null;
+                for (int i=0; i<keys.size(); ++i) {
+                    for (int j=0; j<locals.size(); ++j) {
+                        String local = localMap.get(locals.get(j));
+                        if(local == null) {
+                            local = locals.get(j);
+                        }
+                        if(translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal())
+                            translation = AdditAssist.createTranslation(excelContent, keys.get(i), local, i, j);
+                        else
+                            translation = AdditAssist.createTranslation(excelContent, keys.get(i), localMap.get(locals.get(j)), j, i);
+                        if(translation != null) {
+                            translationList.add(translation);
+                        }
+                    }
+                }
             }
         } else {
-            throw new InvalidExcelContentException(file.getAbsolutePath());
+            throw new InvalidExcelContentException("parse failed:"+file.getAbsolutePath());
         }
     }
 
@@ -370,5 +378,15 @@ public class Addit {
 
     public WorkConfig getWorkConfig() {
         return workConfig;
+    }
+
+    private void onDone(WorkCallback callback, WorkStage workStage) {
+        if(callback != null) {
+            workStage.setEnd(new Date());
+            if(workStage.getIndex() == workStage.getCount()) {
+                running = false;
+            }
+            callback.onDone(workStage);
+        }
     }
 }

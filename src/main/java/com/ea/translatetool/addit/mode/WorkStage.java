@@ -14,10 +14,11 @@ public class WorkStage {
     private String desc;
     private Date start;
     private Date end;
+    private boolean success;
 
     public WorkStage() {}
 
-    public WorkStage(int group, int index, int count, int type, String name, String desc, Date start, Date end) {
+    public WorkStage(int group, int index, int count, int type, String name, String desc, Date start, Date end, boolean success) {
         this.group = group;
         this.index = index;
         this.count = count;
@@ -26,6 +27,7 @@ public class WorkStage {
         this.desc = desc;
         this.start = start;
         this.end = end;
+        this.success = success;
     }
 
     public int getGroup() {
@@ -90,5 +92,13 @@ public class WorkStage {
 
     public void setEnd(Date end) {
         this.end = end;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
     }
 }

@@ -10,6 +10,7 @@ import com.ea.translatetool.util.LoggerUtil;
 import com.ea.translatetool.util.PID;
 import com.ea.translatetool.util.WindowTool;
 
+import java.util.Locale;
 import java.util.Properties;
 
 import static com.ea.translatetool.constant.GlobalConstant.NEED_UI_START_PRO;
@@ -33,7 +34,8 @@ public class App {
     }
 
     private void start(String[] args) {
-        if(!needStartWithUI()) {
+        Locale.setDefault(Locale.ENGLISH);
+        if(needStartWithUI()) {
             UI.start(this);
         } else {
             CmdMode.start(this, args);

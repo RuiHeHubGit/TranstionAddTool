@@ -104,83 +104,96 @@ public class AdditAssist {
             return locator;
         }
 
-
         String keyLocator = null;
         Integer localLocator = null;
         Integer translationLocator = null;
-        Integer orientation = GlobalConstant.Orientation.VERTICAL.ordinal();
+        Integer orientation = GlobalConstant.Orientation.HORIZONTAL.ordinal();
 
         float maxKeySameLv = 0.5f, maxLocalSameLv = 0.5f, maxTranslationSameLv = 0.5f;
         float keySameLv, localSameLv, translationSameLv;
-        for (int i=0; i<rows; ++i) {
-            keySameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_KEY);
-            localSameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_LOCAL);
-            translationSameLv = calcListNotSimilarLevel(excelContent.get(i));
+        List<String> columnContents = new ArrayList<>();
 
-            if(keySameLv > localSameLv && keySameLv > translationSameLv) {
+        for (int i = 0; i < columns && i < 3; ++i) {
+            columnContents.clear();
+            for (int j = 0; j < rows; ++j) {
+                columnContents.add(excelContent.get(j).get(i));
+            }
+            keySameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_KEY);
+            if (keySameLv >= maxKeySameLv) {
+                maxKeySameLv = keySameLv;
+                keyLocator = "c" + i;
+            }
+        }
+        if(maxKeySameLv < 1.0f) {
+            for (int i=0; i<rows && i<3; ++i) {
+                keySameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_KEY);
                 if(keySameLv >= maxKeySameLv) {
                     maxKeySameLv = keySameLv;
-                    keyLocator = "h"+i;
-                }
-            } else if(localSameLv > keySameLv && localSameLv > translationSameLv) {
-                if(localSameLv >= maxLocalSameLv) {
-                    maxLocalSameLv = localSameLv;
-                    localLocator = i;
-                }
-            } else if(translationSameLv > keySameLv && translationSameLv > localSameLv) {
-                if(translationSameLv > maxTranslationSameLv) {
-                    maxKeySameLv = translationSameLv;
-                    translationLocator = i;
+                    keyLocator = "r"+i;
                 }
             }
         }
+        if(keyLocator == null) {
+            return null;
+        }
 
-
-        String keyLocatorH = null;
-        Integer localLocatorH = null;
-        Integer translationLocatorH = null;
-        float maxKeySameLvH = 0.5f, maxLocalSameLvH = 0.5f, maxTranslationSameLvH = 0.5f;
-        float keySameLvH, localSameLvH, translationSameLvH;
-        if(maxKeySameLv < 0.99 && maxLocalSameLv < 0.99 && maxTranslationSameLv < 0.99) {
-            List<String> columnContents = new ArrayList<>();
-            for (int i=0; i<columns; ++i) {
+        for (int i=0; i<rows; ++i) {
+            localSameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_LOCAL);
+            if(localSameLv >= maxLocalSameLv) {
+                maxLocalSameLv = localSameLv;
+                localLocator = i;
+            }
+        }
+        if(maxLocalSameLv < 1.0f) {
+            for (int i = 0; i < columns; ++i) {
                 columnContents.clear();
                 for (int j = 0; j < rows; ++j) {
                     columnContents.add(excelContent.get(j).get(i));
                 }
-
-                keySameLvH = calcSimilarLevel(columnContents, GlobalConstant.REGEX_KEY);
-                localSameLvH = calcSimilarLevel(columnContents, GlobalConstant.REGEX_LOCAL);
-                translationSameLvH = calcListNotSimilarLevel(columnContents);
-
-                if(keySameLvH > localSameLvH && keySameLvH > translationSameLvH) {
-                    if(keySameLvH >= maxKeySameLvH) {
-                        maxKeySameLvH = keySameLvH;
-                        keyLocatorH = "r"+i;
-                    }
-                } else if(localSameLvH > keySameLvH && localSameLvH > translationSameLvH) {
-                    if(localSameLvH >= maxLocalSameLvH) {
-                        maxLocalSameLvH = localSameLvH;
-                        localLocatorH = i;
-                    }
-                } else if(translationSameLvH > keySameLvH && translationSameLvH > localSameLvH) {
-                    if(translationSameLvH > maxTranslationSameLvH) {
-                        maxKeySameLvH = translationSameLvH;
-                        translationLocatorH = i;
-                    }
+                localSameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_LOCAL);
+                if (localSameLv >= maxLocalSameLv) {
+                    maxLocalSameLv = localSameLv;
+                    localLocator = i;
+                    orientation = GlobalConstant.Orientation.VERTICAL.ordinal();
                 }
             }
         }
-
-        if(maxKeySameLvH > maxKeySameLv) {
-            keyLocator = keyLocatorH;
+        if(localLocator == null) {
+            return null;
         }
 
-        if(maxLocalSameLvH > 0.5 && maxTranslationSameLvH > 0.5) {
-            if(maxLocalSameLvH + maxTranslationSameLvH > maxLocalSameLvH + maxTranslationSameLvH) {
-                orientation = GlobalConstant.Orientation.HORIZONTAL.ordinal();
-                localLocator = localLocatorH;
-                translationLocator = translationLocatorH;
+        int num = Integer.parseInt(keyLocator.substring(1));
+        if(keyLocator.startsWith("c") && orientation == GlobalConstant.Orientation.VERTICAL.ordinal()) {
+            for (int i=0; i<columns; ++i) {
+                if(i == num || i == localLocator) {
+                    continue;
+                }
+                columnContents.clear();
+                for (int j = 0; j < rows; ++j) {
+                    columnContents.add(excelContent.get(j).get(i));
+                }
+                translationSameLv = calcListNotSimilarLevel(columnContents);
+                if(translationSameLv > maxTranslationSameLv) {
+                    maxTranslationSameLv = translationSameLv;
+                    translationLocator = i;
+                }
+            }
+            if(translationLocator == null) {
+                return null;
+            }
+        } else if(keyLocator.startsWith("r") && orientation == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
+            for (int i=0; i<rows; ++i) {
+                if(i == num || i == localLocator) {
+                    continue;
+                }
+                translationSameLv = calcListNotSimilarLevel(excelContent.get(i));
+                if(translationSameLv > maxTranslationSameLv) {
+                    maxTranslationSameLv = translationSameLv;
+                    translationLocator = i;
+                }
+            }
+            if(translationLocator == null) {
+                return null;
             }
         }
 
@@ -260,74 +273,66 @@ public class AdditAssist {
         return 1.0f * count / strings.size();
     }
 
-    public static String getSingleKey(List<List<String>> excelContent) {
-        HashMap<String, Integer> sameMap = new HashMap<>();
-        Integer maxCount = 0;
-        String mostSameKey = null;
-        for (int i= 0; i<excelContent.size(); ++i) {
-            List<String> row = excelContent.get(i);
-            for (int j=0; j<row.size(); ++j) {
-                Pattern pattern = Pattern.compile(GlobalConstant.REGEX_KEY);
-                String value = row.get(j);
-                if(pattern.matcher(value).matches()) {
-                    if(!sameMap.containsKey(value)) {
-                        sameMap.put(value, 1);
-                    } else {
-                        Integer count = sameMap.get(value);
-                        sameMap.put(value, ++count);
-                        if(count > maxCount) {
-                            maxCount = count;
-                            mostSameKey = value;
-                        }
-                    }
-                }
-            }
-        }
-        return mostSameKey;
-    }
-
-    public static List<String> getTranslationKeys(List<List<String>> excelContent, String keyLocator, String singleKey) {
-        int size;
+    public static List<String> getTranslationKeys(List<List<String>> excelContent, String keyLocator) {
         int num = Integer.parseInt(keyLocator.substring(1));
         List<String> keys = new ArrayList<>();
-
-        Pattern pattern = Pattern.compile(GlobalConstant.REGEX_KEY);
         if(keyLocator.startsWith("c")) {
-            size = excelContent.size();
+            int size = excelContent.size();
             for (int i=0; i<size; ++i) {
-                String key = excelContent.get(num).get(i);
-                if(pattern.matcher(key).matches())
-                    keys.add(key);
-                else
-                    keys.add(singleKey);
+                keys.add(excelContent.get(i).get(num));
             }
         } else {
             for (String key : excelContent.get(num)) {
-                if(pattern.matcher(key).matches())
-                    keys.add(key);
-                else
-                    keys.add(singleKey);
+                keys.add(key);
             }
         }
         return keys;
     }
 
+    public static List<String> getTranslationLocals(List<List<String>> excelContent, TranslationLocator locator) {
+        List<String> locals = new ArrayList<>();
+        if(locator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
+            for (String key : excelContent.get(locator.getLocalLocator())) {
+                locals.add(key);
+            }
+        } else {
+            int size = excelContent.size();
+            for (int i=0; i<size; ++i) {
+                locals.add(excelContent.get(i).get(locator.getLocalLocator()));
+            }
+        }
+        return locals;
+    }
+
     public static Translation createTranslation(List<String> texts, TranslationLocator translationLocator, HashMap<String, String> localMap, String key) {
         String local = texts.get(translationLocator.getLocalLocator());
         String translateText = texts.get(translationLocator.getTranslationLocator());
-        if(!translateText.isEmpty()) {
-            return null;
-        }
-        if(!Pattern.compile(GlobalConstant.REGEX_LOCAL).matcher(key).matches()) {
-            return null;
-        }
-        if(key.indexOf('.') <= 0 || local.indexOf('_') <= 0 || "[N/A]".equals(translateText)) {
+        if(translateText.isEmpty()
+                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()
+                || !Pattern.compile(GlobalConstant.REGEX_LOCAL).matcher(local).matches()) {
             return null;
         }
 
         if(localMap.containsKey(local)) {
             local = localMap.get(local);
         }
+
+        Translation translation = new Translation();
+        translation.setKey(key);
+        translation.setLocal(local);
+        translation.setTranslation(translateText);
+
+        return translation;
+    }
+
+    public static Translation createTranslation(List<List<String>> excelContent, String key, String local, int row, int col) {
+        String translateText = excelContent.get(row).get(col);
+        if(translateText.isEmpty()
+                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()
+                || !Pattern.compile(GlobalConstant.REGEX_LOCAL).matcher(local).matches()) {
+            return null;
+        }
+
         Translation translation = new Translation();
         translation.setKey(key);
         translation.setLocal(local);
