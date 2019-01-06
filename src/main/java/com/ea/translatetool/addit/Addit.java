@@ -282,8 +282,6 @@ public class Addit {
             } catch (Exception e) {
                 if(null != callback && callback.onError(e)) {
                     throw e;
-                } else {
-                    throw e;
                 }
             }
 

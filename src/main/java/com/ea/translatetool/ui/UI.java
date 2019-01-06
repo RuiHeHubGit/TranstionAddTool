@@ -210,7 +210,7 @@ public class UI extends JFrame {
     private void initTab() {
 
         tabbedPane = new JTabbedPane();
-        inputTab = new InputTab();
+        inputTab = new InputTab(this);
         outputTab = new OutputTab();
         settingTab = new SettingTab();
 

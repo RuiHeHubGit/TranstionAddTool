@@ -12,13 +12,13 @@ import java.util.List;
 public class IOUtil {
     private static final String DEF_ENCODE = "utf-8";
 
-    public static List<File> fileList(File file, boolean deep, DirectoryStream.Filter<File> filter) throws IOException {
+    public static List<File> fileList(File file, boolean deep, DirectoryStream.Filter<File> filter) {
         List<File> fileList = new ArrayList<>();
         scanPath(file, fileList, deep, filter);
         return fileList;
     }
 
-    private static void scanPath(File file, List<File> fileList, boolean deep, DirectoryStream.Filter<File> filter) throws IOException {
+    private static void scanPath(File file, List<File> fileList, boolean deep, DirectoryStream.Filter<File> filter) {
         if(file.exists()) {
             if (deep && file.isDirectory()) {
                 File[] files = file.listFiles();
@@ -26,7 +26,13 @@ public class IOUtil {
                     scanPath(f, fileList, deep, filter);
                 }
             } else if(file.isFile()) {
-                if(filter != null && !filter.accept(file)) return;
+                boolean accept = false;
+                try {
+                    accept = filter.accept(file);
+                } catch (IOException e) {
+                    LoggerUtil.error(e.getMessage());
+                }
+                if(filter != null && !accept) return;
                 fileList.add(file);
             }
         }
