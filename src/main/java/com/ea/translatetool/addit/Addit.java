@@ -52,7 +52,7 @@ public class Addit {
                 addit.loadTranslateFiles(workConfig, callback);
                 addit.stage = 2;
                 addit.loadAllTranslate(workConfig, callback);
-            } else if(mode == 2) {
+            } else if(mode == 1) {
                 addit.stage = 1;
                 addit.stageCount = 2;
                 addit.loadAllTranslate(workConfig, callback);
@@ -269,12 +269,6 @@ public class Addit {
         workStage = new WorkStage(mode, stage, stageCount, 3, "load translate", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
-        }
-        if(workConfig.getTranslationList() == null) {
-            workConfig.setTranslationList(new ArrayList<Translation>());
-        }
-        if(workConfig.getTranslationLocatorMap() == null) {
-            workConfig.setTranslationLocatorMap(new HashMap<String, TranslationLocator>());
         }
         for (int i=0; i<sourceFiles.size(); ++i) {
             try {

@@ -241,9 +241,6 @@ public class CmdMode {
                     translationLocator.setTranslationLocator(Integer.parseInt(columns[3]));
                     translationLocator.setTranslationLocator("v".equalsIgnoreCase(columns[4])?
                             GlobalConstant.Orientation.VERTICAL.ordinal():GlobalConstant.Orientation.HORIZONTAL.ordinal());
-                    if(workConfig.getTranslationLocatorMap() == null) {
-                        workConfig.setTranslationLocatorMap(new HashMap<String, TranslationLocator>());
-                    }
                     workConfig.getTranslationLocatorMap().put(columns[1], translationLocator);
                 }
             }

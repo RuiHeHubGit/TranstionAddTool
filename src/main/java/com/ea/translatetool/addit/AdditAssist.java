@@ -78,6 +78,8 @@ public class AdditAssist {
         if(outPath.exists()) {
             workConfig.setOutput(outPath);
         }
+        workConfig.setTranslationLocatorMap(new HashMap<String, TranslationLocator>());
+        workConfig.setTranslationList(new ArrayList<Translation>());
         return workConfig;
     }
 

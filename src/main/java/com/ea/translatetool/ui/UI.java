@@ -23,8 +23,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Set;
+import java.util.TreeMap;
 
 public class UI extends JFrame {
     private static UI ui;
@@ -56,6 +60,25 @@ public class UI extends JFrame {
 
     private void doStart() {
         if(Addit.isRunning()) {
+            return;
+        }
+
+        TreeMap<String, Object[][]> tableData = inputTab.getTableData();
+        Set<String> keys = tableData.keySet();
+        workConfig.getInput().clear();
+        for (String key : keys) {
+            Object[][] data = tableData.get(key);
+            for (int i=0; i<data.length; ++i) {
+                if(!(Boolean) data[i][0]) {
+                    workConfig.getTranslationLocatorMap().remove(key);
+                    continue;
+                }
+                workConfig.getInput().add(new File(key));
+            }
+        }
+
+        if(workConfig.getInput().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please add excel file.", "prompt", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -148,9 +171,9 @@ public class UI extends JFrame {
         }
 
         ui = new UI(app);
-        ui.initUI();
-        ui.addShutdownHandler();
         ui.workConfig = AdditAssist.createWorkConfig(app.getAppConfig());
+        ui.addShutdownHandler();
+        ui.initUI();
         ui.mode = 0;
     }
 
@@ -211,7 +234,7 @@ public class UI extends JFrame {
 
         tabbedPane = new JTabbedPane();
         inputTab = new InputTab(this);
-        outputTab = new OutputTab();
+        outputTab = new OutputTab(this);
         settingTab = new SettingTab();
 
         mainContainer.add(tabbedPane, BorderLayout.CENTER);
@@ -297,5 +320,9 @@ public class UI extends JFrame {
         this.exitStatus = status;
         this.dispose();
         System.exit(status);
+    }
+
+    public WorkConfig getWorkConfig() {
+        return workConfig;
     }
 }

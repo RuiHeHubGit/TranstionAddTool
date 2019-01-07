@@ -3,6 +3,7 @@ package com.ea.translatetool.ui.component;
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.awt.geom.Rectangle2D;
 
 /**
  * Created by HeRui on 2019/1/6.
@@ -20,6 +21,22 @@ public class TranslateFileJTable extends JTable{
         firstColumn.setPreferredWidth(25);
         firstColumn.setMaxWidth(25);
         firstColumn.setMinWidth(25);
+
+        int maxLen = 0;
+        String maxLenStr = "";
+        for (int i=0; i<tableModel.getRowCount(); ++i) {
+            String col1 = (String) tableModel.getValueAt(i, 1);
+            if(col1.length() > maxLen) {
+                maxLen = col1.length();
+                maxLenStr = col1;
+            }
+        }
+
+        //calc second need min-width
+        FontMetrics fm = new JLabel().getFontMetrics(getFont());
+        Rectangle2D bounds = fm.getStringBounds(maxLenStr, null);
+        TableColumn secondColumn = getColumnModel().getColumn(1);
+        secondColumn.setPreferredWidth((int) bounds.getWidth());
 
         setRowHeight(20);
 
