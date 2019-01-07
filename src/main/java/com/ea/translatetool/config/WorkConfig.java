@@ -21,7 +21,7 @@ public class WorkConfig {
     private HashMap<String, String> localMap;
     private HashMap<String, TranslationLocator> translationLocatorMap;
 
-    public String getFilePrefix() {
+    public String getFileNamePrefix() {
         return filePrefix;
     }
 
@@ -29,7 +29,7 @@ public class WorkConfig {
         this.filePrefix = filePrefix;
     }
 
-    public String getFileSuffix() {
+    public String getFileNameSuffix() {
         return fileSuffix;
     }
 

@@ -211,7 +211,7 @@ public class Addit {
 
     private File getLocalFile(WorkConfig workConfig, String local) {
         return new File(workConfig.getOutput(),
-                workConfig.getFilePrefix()+local+workConfig.getFileSuffix()+"."+workConfig.getOutType().getValue());
+                workConfig.getFileNamePrefix()+local+workConfig.getFileNameSuffix()+workConfig.getOutType().getValue());
     }
 
     private void mergeNewAddTranslate(WorkConfig workConfig) {

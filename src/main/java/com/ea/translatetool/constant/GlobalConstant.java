@@ -25,8 +25,8 @@ public interface GlobalConstant {
     }
 
     enum OutType {
-        TYPE_JSON("json"),
-        TYPE_PRO("properties");
+        TYPE_JSON(".json"),
+        TYPE_PRO(".properties");
 
         private String value;
         OutType(String typeName) {

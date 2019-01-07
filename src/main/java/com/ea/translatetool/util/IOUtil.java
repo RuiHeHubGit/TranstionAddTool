@@ -20,16 +20,7 @@ public class IOUtil {
 
     private static void scanPath(File file, List<File> fileList, boolean deep, DirectoryStream.Filter<File> filter) {
         if(file.exists()) {
-            if (file.isDirectory()) {
-                File[] files = file.listFiles();
-                for (File f : files) {
-                    if(deep) {
-                        scanPath(f, fileList, deep, filter);
-                    } else if(f.isFile()) {
-                        fileList.add(f);
-                    }
-                }
-            } else if(file.isFile()) {
+            if(file.isFile()) {
                 boolean accept = false;
                 try {
                     accept = filter.accept(file);
@@ -38,6 +29,14 @@ public class IOUtil {
                 }
                 if(filter != null && !accept) return;
                 fileList.add(file);
+            } else {
+                File[] files = file.listFiles();
+                for (File f:files) {
+                    if(!deep && f.isDirectory()) {
+                        continue;
+                    }
+                    scanPath(f, fileList, deep, filter);
+                }
             }
         }
 

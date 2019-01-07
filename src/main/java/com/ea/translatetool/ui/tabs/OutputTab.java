@@ -26,24 +26,30 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
 
     public OutputTab(UI parent) {
         workConfig = parent.getWorkConfig();
-        setLayout(new BorderLayout());
+        setLayout(new BorderLayout(0, 5));
         initTopPanel();
     }
 
     private void initTopPanel() {
         JPanel topPane = new JPanel(new BorderLayout(5,5));
         add(topPane, BorderLayout.NORTH);
-        JPanel westPanel = new JPanel(new GridLayout(1, 2, 15, 5));
         JComboBox jcbOutType = new JComboBox(GlobalConstant.OutType.values());
         jcbOutType.addItemListener(this);
-        westPanel.add(jcbOutType);
-        westPanel.add(new JLabel("out path:"));
-        topPane.add(westPanel, BorderLayout.WEST);
+        topPane.add(jcbOutType, BorderLayout.WEST);
+
+        JPanel centerPanel = new JPanel(new BorderLayout(5, 0));
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
+        centerPanel.add(new JLabel("out path:"), BorderLayout.WEST);
         tfOutPath = new JTextField();
-        topPane.add(tfOutPath, BorderLayout.CENTER);
+        centerPanel.add(tfOutPath, BorderLayout.CENTER);
+
+        topPane.add(centerPanel, BorderLayout.CENTER);
         JButton btnSelect = new JButton("select");
         btnSelect.addActionListener(this);
         topPane.add(btnSelect, BorderLayout.EAST);
+
+        tfOutPath.setText(workConfig.getOutput().getAbsolutePath());
+        showFileListTable();
     }
 
     @Override
@@ -74,32 +80,39 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
         java.util.List<File> fileList = IOUtil.fileList(workConfig.getOutput(), false, new  DirectoryStream.Filter<File>() {
             @Override
             public boolean accept(File entry) {
-                String suffix = ".json";
+                String suffix = GlobalConstant.OutType.TYPE_JSON.getValue();
                 if(workConfig.getOutType() == GlobalConstant.OutType.TYPE_PRO) {
-                    suffix = ".properties";
+                    suffix = GlobalConstant.OutType.TYPE_PRO.getValue();
                 }
-                return entry.getName().toUpperCase().endsWith(suffix);
+                return entry.getName().toLowerCase().endsWith(suffix);
             }
         });
 
         tableData = new Object[fileList.size()][3];
-        tableMode = new DefaultTableModel(tableData, new String[] {"filename", "local", "type"});
-        if(fileListTable != null) {
-            remove(fileListTable);
-        }
-        fileListTable = new JTable(tableMode);
-        add(fileListTable, BorderLayout.CENTER);
-
         for (int i=0; i<fileList.size(); ++i) {
             File file = fileList.get(i);
             tableData[i][0] = file.getName();
             tableData[i][1] = workConfig.getTranslationLocatorMap().get(file.getName());
+            if(tableData[i][1] == null) {
+                tableData[i][1] =file.getName();
+            }
             tableData[i][2] = workConfig.getOutType();
         }
+
+
+        if(fileListTable == null) {
+            fileListTable = new JTable();
+            add(fileListTable, BorderLayout.CENTER);
+        }
+        tableMode = new DefaultTableModel(tableData, new String[] {"filename", "local", "type"});
+        fileListTable.setModel(tableMode);
+        fileListTable.getTableHeader().setVisible(true);
+        fileListTable.updateUI();
     }
 
     @Override
     public void itemStateChanged(ItemEvent e) {
         workConfig.setOutType((GlobalConstant.OutType) e.getItem());
+        showFileListTable();
     }
 }
