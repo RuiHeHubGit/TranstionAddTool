@@ -4,8 +4,8 @@ public interface GlobalConstant {
     String[] NEED_UI_START_PRO = {"explorer.exe", "idea.+\\.exe", "eclipse.+\\.exe"};
     String CONFIG_FILE_PATH = "config/toolConfig.properties";
 
-    String REGEX_KEY = "(([a-zA-Z]{2,10}\\.){2,10})+[a-zA-Z_\\d]+";
-    String REGEX_LOCAL = "^[a-zA-Z]{2,8}_[a-zA-Z]{2,8}$";
+    String REGEX_KEY = "[a-z_.\\d]{10,60}";
+    String REGEX_LOCAL = "([a-zA-Z]{2,8}_[a-zA-Z]{2,8})|(((\\(?[A-Za-z]{2,16}\\)?\\s{0,1}){1,4}))";
 
     interface AppConfigDefaultValue {
         String LOCAL_MAP_FILE_PATH = "config/localMap.properties";

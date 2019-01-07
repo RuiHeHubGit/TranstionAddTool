@@ -27,13 +27,11 @@ public class InputTab extends JPanel implements ActionListener{
     private WorkConfig workConfig;
     private JPanel contentPanel;
     private TreeMap<String, List<File>> excelFiles;
-    private TreeMap<String, Object[][]> tableData;
     private TreeSet<String> updateList;
     private HashMap<String, JTable> tableViewMap;
 
     public InputTab(UI parent) {
         this.excelFiles = new TreeMap<>();
-        this.tableData = new TreeMap<>();
         this.updateList = new TreeSet<>();
         this.tableViewMap = new HashMap<>();
         this.workConfig = parent.getWorkConfig();
@@ -64,49 +62,46 @@ public class InputTab extends JPanel implements ActionListener{
                 continue;
             }
 
-            Object[][] data = tableData.get(key);
-            if(data == null) {
-                data = new Object[files.size()][6];
-                tableData.put(key, data);
+            JTable jTable = tableViewMap.get(key);
+            if(jTable == null) {
+                JPanel panel = new JPanel(new BorderLayout(2, 2));
+                contentPanel.add(panel);
+                panel.add(new JLabel(" " + key), BorderLayout.NORTH);
+                jTable = new TranslateFileJTable();
+                panel.add(jTable, BorderLayout.CENTER);
+                tableViewMap.put(key, jTable);
             }
+            DefaultTableModel tableModel = (DefaultTableModel) jTable.getModel();
+            tableModel.setRowCount(files.size());
+            tableModel.setColumnCount(6);
+
             for (int i=0; i<files.size(); ++i) {
-                data[i][0] = false;
                 File file = files.get(i);
-                data[i][1] = file.getName();
+                tableModel.setValueAt(false, i, 0);
+                tableModel.setValueAt(file.getName(), i, 1);
                 try {
                     TranslationLocator locator = AdditAssist.calcTranslationLocator(
                             ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0 ), null);
                     if(locator != null) {
-                        workConfig.getTranslationLocatorMap().put(key, locator);
-                        data[i][0] = true;
+                        tableModel.setValueAt(true, i, 0);
                         if(locator.getKeyLocator() != null) {
-                            data[i][2] = locator.getKeyLocator();
+                            tableModel.setValueAt(locator.getKeyLocator(), i, 2);
                         }
                         if(locator.getOrientation() != null) {
-                            data[i][3] = GlobalConstant.Orientation.values()[locator.getOrientation()].toString().toLowerCase();
+                            tableModel.setValueAt(GlobalConstant.Orientation.values()[locator.getOrientation()].toString().toLowerCase(), i, 3);
                         }
                         if(locator.getLocalLocator() != null) {
-                            data[i][4] = locator.getLocalLocator();
+                            tableModel.setValueAt(locator.getLocalLocator(), i, 4);
                         }
                         if(locator.getTranslationLocator() != null) {
-                            data[i][5] = locator.getTranslationLocator();
+                            tableModel.setValueAt(locator.getTranslationLocator(), i, 5);
                         }
                     }
                 } catch (IOException e) {
                     LoggerUtil.error(e.getMessage());
                 }
             }
-
-            JTable jTable = tableViewMap.get(key);
-            if(jTable == null) {
-                JPanel panel = new JPanel(new BorderLayout(2, 2));
-                contentPanel.add(panel);
-                panel.add(new JLabel(" " + key), BorderLayout.NORTH);
-                TableModel tableModel = new DefaultTableModel(data, columnNames);
-                jTable = new TranslateFileJTable(tableModel);
-                panel.add(jTable, BorderLayout.CENTER);
-                tableViewMap.put(key, jTable);
-            }
+            jTable.setModel(tableModel);
         }
         contentPanel.updateUI();
     }
@@ -160,21 +155,19 @@ public class InputTab extends JPanel implements ActionListener{
     }
 
     private void selectAll(boolean checked) {
-        Set<String> keys = tableData.keySet();
+        Set<String> keys = tableViewMap.keySet();
         for (String key : keys) {
-            for (Object[] row : tableData.get(key)) {
-                row[0] = checked;
-            }
             JTable tableView = tableViewMap.get(key);
-            tableView.updateUI();
+            DefaultTableModel tableModel = (DefaultTableModel) tableView.getModel();
+            for (int i=0; i<tableModel.getRowCount(); ++i) {
+                tableModel.setValueAt(checked, i, 0);
+            }
         }
     }
 
     private void cleanSelectPath() {
         excelFiles.clear();
-        tableData.clear();
         tableViewMap.clear();
-        workConfig.getTranslationLocatorMap().clear();
         contentPanel.removeAll();
         contentPanel.updateUI();
     }
@@ -267,7 +260,7 @@ public class InputTab extends JPanel implements ActionListener{
         }
     }
 
-    public TreeMap<String, Object[][]> getTableData() {
-        return tableData;
+    public HashMap<String, JTable> getTableViewMap() {
+        return tableViewMap;
     }
 }

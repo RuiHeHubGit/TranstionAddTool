@@ -1,6 +1,7 @@
 package com.ea.translatetool.ui.component;
 
 import javax.swing.*;
+import javax.swing.event.TableModelEvent;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
@@ -9,35 +10,19 @@ import java.awt.geom.Rectangle2D;
  * Created by HeRui on 2019/1/6.
  */
 public class TranslateFileJTable extends JTable{
+    private TableModel tableModel;
     private JCheckBoxEditor jCheckBoxEditor;
     private JComboBoxEditor jComboBoxEditor;
     private JCheckBoxTableCellRenderer jCheckBoxTableCellRenderer;
     private DefaultTableCellRenderer tcr;
 
+    public TranslateFileJTable() {
+        this(null);
+    }
+
     public TranslateFileJTable(TableModel tableModel) {
         super(tableModel);
-        getTableHeader().setReorderingAllowed(false);
-        TableColumn firstColumn = getColumnModel().getColumn(0);
-        firstColumn.setPreferredWidth(25);
-        firstColumn.setMaxWidth(25);
-        firstColumn.setMinWidth(25);
-
-        int maxLen = 0;
-        String maxLenStr = "";
-        for (int i=0; i<tableModel.getRowCount(); ++i) {
-            String col1 = (String) tableModel.getValueAt(i, 1);
-            if(col1.length() > maxLen) {
-                maxLen = col1.length();
-                maxLenStr = col1;
-            }
-        }
-
-        //calc second need min-width
-        FontMetrics fm = new JLabel().getFontMetrics(getFont());
-        Rectangle2D bounds = fm.getStringBounds(maxLenStr, null);
-        TableColumn secondColumn = getColumnModel().getColumn(1);
-        secondColumn.setPreferredWidth((int) bounds.getWidth());
-
+        this.tableModel = tableModel;
         setRowHeight(20);
 
         jCheckBoxEditor = new JCheckBoxEditor(true);
@@ -61,6 +46,51 @@ public class TranslateFileJTable extends JTable{
                 return super.getTableCellRendererComponent(table, value,isSelected, hasFocus, row, column);
             }
         };
+
+        if(dataModel != null) {
+            setModel(dataModel);
+        }
+    }
+
+    @Override
+    public void setModel(TableModel dataModel) {
+        super.setModel(dataModel);
+
+        if(dataModel == null) {
+            return;
+        }
+        if(getColumnModel().getColumnCount() > 0) {
+            TableColumn firstColumn = getColumnModel().getColumn(0);
+            firstColumn.setPreferredWidth(25);
+            firstColumn.setMaxWidth(25);
+            firstColumn.setMinWidth(25);
+
+            int maxLen = 0;
+            String maxLenStr = "";
+            for (int i = 0; i < dataModel.getRowCount(); ++i) {
+                String col1 = (String) dataModel.getValueAt(i, 1);
+                if (col1.length() > maxLen) {
+                    maxLen = col1.length();
+                    maxLenStr = col1;
+                }
+            }
+
+            //calc second need min-width
+            FontMetrics fm = new JLabel().getFontMetrics(getFont());
+            Rectangle2D bounds = fm.getStringBounds(maxLenStr, null);
+            TableColumn secondColumn = getColumnModel().getColumn(1);
+            secondColumn.setPreferredWidth((int) bounds.getWidth());
+        }
+    }
+
+    @Override
+    public void tableChanged(TableModelEvent e) {
+        int row = e.getFirstRow();
+        int col = e.getColumn();
+        if(row >= 0 && col >= 0) {
+            Object value = getValueAt(row, col);
+        }
+        super.tableChanged(e);
     }
 
     @Override

@@ -6,9 +6,11 @@ import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
 import com.ea.translatetool.addit.exception.InvalidExcelContentException;
+import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
 import com.ea.translatetool.config.WorkConfig;
+import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.tabs.InputTab;
 import com.ea.translatetool.ui.tabs.OutputTab;
 import com.ea.translatetool.ui.tabs.SettingTab;
@@ -18,6 +20,7 @@ import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowTool;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -63,17 +66,30 @@ public class UI extends JFrame {
             return;
         }
 
-        TreeMap<String, Object[][]> tableData = inputTab.getTableData();
-        Set<String> keys = tableData.keySet();
+        HashMap<String, JTable> tableHashMap = inputTab.getTableViewMap();
+        Set<String> keys = tableHashMap.keySet();
         workConfig.getInput().clear();
+        workConfig.getTranslationLocatorMap().clear();
         for (String key : keys) {
-            Object[][] data = tableData.get(key);
-            for (int i=0; i<data.length; ++i) {
-                if(!(Boolean) data[i][0]) {
-                    workConfig.getTranslationLocatorMap().remove(key);
-                    continue;
+            JTable jTable = tableHashMap.get(key);
+            DefaultTableModel tableModel = (DefaultTableModel) jTable.getModel();
+            for (int i=0; i<tableModel.getRowCount(); ++i) {
+                if((boolean)tableModel.getValueAt(i, 0)) {
+                    File file = new File(key, (String) tableModel.getValueAt(i, 1));
+                    workConfig.getInput().add(file);
+                    if(tableModel.getValueAt(i, 2) == null) {
+                        continue;
+                    }
+                    TranslationLocator locator = new TranslationLocator();
+                    getWorkConfig().getTranslationLocatorMap().put(file.getAbsolutePath(), locator);
+                    locator.setKeyLocator((String) tableModel.getValueAt(i, 2));
+                    String ori = (String) tableModel.getValueAt(i, 3);
+                    if(ori != null) {
+                        locator.setOrientation(GlobalConstant.Orientation.valueOf(ori.toUpperCase()).ordinal());
+                    }
+                    locator.setLocalLocator((Integer) tableModel.getValueAt(i, 4));
+                    locator.setTranslationLocator((Integer) tableModel.getValueAt(i, 5));
                 }
-                workConfig.getInput().add(new File(key));
             }
         }
 

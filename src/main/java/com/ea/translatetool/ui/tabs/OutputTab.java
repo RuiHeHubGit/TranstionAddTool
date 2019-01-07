@@ -92,11 +92,12 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
         for (int i=0; i<fileList.size(); ++i) {
             File file = fileList.get(i);
             tableData[i][0] = file.getName();
-            tableData[i][1] = workConfig.getTranslationLocatorMap().get(file.getName());
+            String str = file.getName().substring(0, file.getName().lastIndexOf('.'));
+            tableData[i][1] = workConfig.getLocalMap().get(str);
             if(tableData[i][1] == null) {
-                tableData[i][1] =file.getName();
+                tableData[i][1] = str;
             }
-            tableData[i][2] = workConfig.getOutType();
+            tableData[i][2] = workConfig.getOutType().getValue().substring(1);
         }
 
 
