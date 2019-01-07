@@ -20,7 +20,7 @@ import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowTool;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -29,9 +29,7 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Set;
-import java.util.TreeMap;
 
 public class UI extends JFrame {
     private static UI ui;
@@ -72,7 +70,7 @@ public class UI extends JFrame {
         workConfig.getTranslationLocatorMap().clear();
         for (String key : keys) {
             JTable jTable = tableHashMap.get(key);
-            DefaultTableModel tableModel = (DefaultTableModel) jTable.getModel();
+            TableModel tableModel = jTable.getModel();
             for (int i=0; i<tableModel.getRowCount(); ++i) {
                 if((boolean)tableModel.getValueAt(i, 0)) {
                     File file = new File(key, (String) tableModel.getValueAt(i, 1));

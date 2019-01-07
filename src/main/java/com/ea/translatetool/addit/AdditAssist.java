@@ -146,7 +146,7 @@ public class AdditAssist {
                 localLocator = i;
             }
         }
-        if(maxLocalSameLv < 1.0f) {
+        if(maxLocalSameLv < 1.0f && rows > columns) {
             for (int i = 0; i < columns; ++i) {
                 columnContents.clear();
                 for (int j = 0; j < rows; ++j) {

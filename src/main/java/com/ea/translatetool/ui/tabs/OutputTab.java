@@ -6,6 +6,7 @@ import com.ea.translatetool.ui.UI;
 import com.ea.translatetool.util.IOUtil;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
@@ -14,25 +15,66 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.DirectoryStream;
 
 public class OutputTab extends JPanel implements ActionListener, ItemListener {
     private WorkConfig workConfig;
     private JTextField tfOutPath;
     private JTable fileListTable;
+    private JPanel topPane;
     private TableModel tableMode;
     private Object[][] tableData;
 
     public OutputTab(UI parent) {
         workConfig = parent.getWorkConfig();
-        setLayout(new BorderLayout(0, 5));
+        setLayout(new SpringLayout());
         initTopPanel();
+        initFileListTable();
+        showFileListTable();
+    }
+
+    private void initFileListTable() {
+        fileListTable = new JTable() {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        fileListTable.setRowHeight(20);
+        fileListTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer(){
+            private static final long serialVersionUID = 1L;
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,int row, int column){
+                if(row%2 == 0)
+                    setBackground(Color.WHITE);//设置奇数行底色
+                else if(row%2 == 1)
+                    setBackground(new Color(220,230,241));//设置偶数行底色
+
+                if(fileListTable.getValueAt(row, 2) == null) {
+                    setForeground(Color.RED);
+                } else {
+                    setForeground(Color.BLACK);
+                }
+                return super.getTableCellRendererComponent(table, value,isSelected, hasFocus, row, column);
+            }
+        });
+
+        JScrollPane jScrollPane = new JScrollPane(fileListTable);
+        add(jScrollPane);
+        SpringLayout springLayout = (SpringLayout) getLayout();
+        springLayout.putConstraint(SpringLayout.NORTH,  jScrollPane, 5, SpringLayout.SOUTH, topPane);
+        springLayout.putConstraint(SpringLayout.SOUTH,  jScrollPane, 0, SpringLayout.SOUTH, this);
+        springLayout.putConstraint(SpringLayout.WEST,  jScrollPane, 0, SpringLayout.WEST, this);
+        springLayout.putConstraint(SpringLayout.EAST,  jScrollPane, 0, SpringLayout.EAST, this);
     }
 
     private void initTopPanel() {
-        JPanel topPane = new JPanel(new BorderLayout(5,5));
-        add(topPane, BorderLayout.NORTH);
+        topPane = new JPanel(new BorderLayout(5,5));
+        add(topPane);
+        SpringLayout springLayout = (SpringLayout) getLayout();
+        springLayout.putConstraint(SpringLayout.NORTH,  topPane, 5, SpringLayout.NORTH, this);
+        springLayout.putConstraint(SpringLayout.WEST,  topPane, 0, SpringLayout.WEST, this);
+        springLayout.putConstraint(SpringLayout.EAST,  topPane, 0, SpringLayout.EAST, this);
+
         JComboBox jcbOutType = new JComboBox(GlobalConstant.OutType.values());
         jcbOutType.addItemListener(this);
         topPane.add(jcbOutType, BorderLayout.WEST);
@@ -49,7 +91,6 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
         topPane.add(btnSelect, BorderLayout.EAST);
 
         tfOutPath.setText(workConfig.getOutput().getAbsolutePath());
-        showFileListTable();
     }
 
     @Override
@@ -100,11 +141,6 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
             tableData[i][2] = workConfig.getOutType().getValue().substring(1);
         }
 
-
-        if(fileListTable == null) {
-            fileListTable = new JTable();
-            add(fileListTable, BorderLayout.CENTER);
-        }
         tableMode = new DefaultTableModel(tableData, new String[] {"filename", "local", "type"});
         fileListTable.setModel(tableMode);
         fileListTable.getTableHeader().setVisible(true);

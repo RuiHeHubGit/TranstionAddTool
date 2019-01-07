@@ -46,10 +46,6 @@ public class TranslateFileJTable extends JTable{
                 return super.getTableCellRendererComponent(table, value,isSelected, hasFocus, row, column);
             }
         };
-
-        if(dataModel != null) {
-            setModel(dataModel);
-        }
     }
 
     @Override
@@ -81,16 +77,6 @@ public class TranslateFileJTable extends JTable{
             TableColumn secondColumn = getColumnModel().getColumn(1);
             secondColumn.setPreferredWidth((int) bounds.getWidth());
         }
-    }
-
-    @Override
-    public void tableChanged(TableModelEvent e) {
-        int row = e.getFirstRow();
-        int col = e.getColumn();
-        if(row >= 0 && col >= 0) {
-            Object value = getValueAt(row, col);
-        }
-        super.tableChanged(e);
     }
 
     @Override

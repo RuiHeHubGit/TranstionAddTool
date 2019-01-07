@@ -12,6 +12,7 @@ import com.ea.translatetool.util.LoggerUtil;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
@@ -55,7 +56,6 @@ public class InputTab extends JPanel implements ActionListener{
 
     private void showFileListTable() {
 
-        Object[] columnNames = new Object[]{new JCheckBox(), "file name", "key", "orientation", "local", "translation"};
         for (String key : updateList) {
             List<File> files = excelFiles.get(key);
             if(files.isEmpty()) {
@@ -71,37 +71,47 @@ public class InputTab extends JPanel implements ActionListener{
                 panel.add(jTable, BorderLayout.CENTER);
                 tableViewMap.put(key, jTable);
             }
-            DefaultTableModel tableModel = (DefaultTableModel) jTable.getModel();
-            tableModel.setRowCount(files.size());
-            tableModel.setColumnCount(6);
+            final Object[][] data = new Object[files.size()][6];
+            TableModel dataModel = new AbstractTableModel() {
+                String[] columnNames = new String[]{"", "file name", "key", "orientation", "local", "translation"};
+                public int getColumnCount() { return columnNames.length; }
+                public int getRowCount() { return data.length;}
+                public Object getValueAt(int row, int col) {return data[row][col];}
+                public String getColumnName(int column) {return columnNames[column];}
+                public Class getColumnClass(int c) {return getValueAt(0, c).getClass();}
+                public boolean isCellEditable(int row, int col) {return true;}
+                public void setValueAt(Object aValue, int row, int column) {
+                    data[row][column] = aValue;
+                }
+            };
 
             for (int i=0; i<files.size(); ++i) {
                 File file = files.get(i);
-                tableModel.setValueAt(false, i, 0);
-                tableModel.setValueAt(file.getName(), i, 1);
+                dataModel.setValueAt(false, i, 0);
+                dataModel.setValueAt(file.getName(), i, 1);
                 try {
                     TranslationLocator locator = AdditAssist.calcTranslationLocator(
                             ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0 ), null);
                     if(locator != null) {
-                        tableModel.setValueAt(true, i, 0);
+                        dataModel.setValueAt(true, i, 0);
                         if(locator.getKeyLocator() != null) {
-                            tableModel.setValueAt(locator.getKeyLocator(), i, 2);
+                            dataModel.setValueAt(locator.getKeyLocator(), i, 2);
                         }
                         if(locator.getOrientation() != null) {
-                            tableModel.setValueAt(GlobalConstant.Orientation.values()[locator.getOrientation()].toString().toLowerCase(), i, 3);
+                            dataModel.setValueAt(GlobalConstant.Orientation.values()[locator.getOrientation()].toString().toLowerCase(), i, 3);
                         }
                         if(locator.getLocalLocator() != null) {
-                            tableModel.setValueAt(locator.getLocalLocator(), i, 4);
+                            dataModel.setValueAt(locator.getLocalLocator(), i, 4);
                         }
                         if(locator.getTranslationLocator() != null) {
-                            tableModel.setValueAt(locator.getTranslationLocator(), i, 5);
+                            dataModel.setValueAt(locator.getTranslationLocator(), i, 5);
                         }
                     }
                 } catch (IOException e) {
                     LoggerUtil.error(e.getMessage());
                 }
             }
-            jTable.setModel(tableModel);
+            jTable.setModel(dataModel);
         }
         contentPanel.updateUI();
     }
@@ -177,6 +187,7 @@ public class InputTab extends JPanel implements ActionListener{
             @Override
             public boolean accept(File f) {
                 if(f.isDirectory() || (f.isFile()
+                        && !f.getName().startsWith("~$")
                         && (f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
                         || f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX)))) {
                     return true;
@@ -219,7 +230,7 @@ public class InputTab extends JPanel implements ActionListener{
                 newFileList = IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
                     @Override
                     public boolean accept(File entry) throws IOException {
-                        if(entry.isFile()
+                        if(entry.isFile()  && !entry.getName().startsWith("~$")
                                 && (entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
                                 || entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX))) {
                             return true;
