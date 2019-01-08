@@ -10,10 +10,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
+import java.awt.event.*;
 import java.io.File;
 import java.nio.file.DirectoryStream;
 
@@ -65,6 +62,14 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
         springLayout.putConstraint(SpringLayout.SOUTH,  jScrollPane, 0, SpringLayout.SOUTH, this);
         springLayout.putConstraint(SpringLayout.WEST,  jScrollPane, 0, SpringLayout.WEST, this);
         springLayout.putConstraint(SpringLayout.EAST,  jScrollPane, 0, SpringLayout.EAST, this);
+
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                showFileListTable();
+                super.componentShown(e);
+            }
+        });
     }
 
     private void initTopPanel() {
@@ -84,6 +89,7 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
         centerPanel.add(new JLabel("out path:"), BorderLayout.WEST);
         tfOutPath = new JTextField();
         centerPanel.add(tfOutPath, BorderLayout.CENTER);
+        tfOutPath.requestFocus();
 
         topPane.add(centerPanel, BorderLayout.CENTER);
         JButton btnSelect = new JButton("select");
@@ -111,14 +117,13 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
 
         if(JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "select")) {
             File file = fileChooser.getSelectedFile();
-            workConfig.setOutput(file);
             tfOutPath.setText(file.getAbsolutePath());
             showFileListTable();
         }
     }
 
-    private void showFileListTable() {
-        java.util.List<File> fileList = IOUtil.fileList(workConfig.getOutput(), false, new  DirectoryStream.Filter<File>() {
+    public void showFileListTable() {
+        java.util.List<File> fileList = IOUtil.fileList(new File(tfOutPath.getText()), false, new  DirectoryStream.Filter<File>() {
             @Override
             public boolean accept(File entry) {
                 String suffix = GlobalConstant.OutType.TYPE_JSON.getValue();
@@ -145,6 +150,10 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
         fileListTable.setModel(tableMode);
         fileListTable.getTableHeader().setVisible(true);
         fileListTable.updateUI();
+    }
+
+    public String getOutPath() {
+        return tfOutPath.getText();
     }
 
     @Override

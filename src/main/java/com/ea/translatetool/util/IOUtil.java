@@ -72,9 +72,11 @@ public class IOUtil {
         BufferedWriter bufferedWriter = null;
         try {
             bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(localFile), encoding));
-            for (String line : lines) {
-                bufferedWriter.write(line);
-                bufferedWriter.newLine();
+            for (int i=0; i<lines.size(); ++i) {
+                bufferedWriter.write(lines.get(i));
+                if(i + 1 < lines.size()) {
+                    bufferedWriter.newLine();
+                }
             }
         } catch (IOException e) {
             throw e;

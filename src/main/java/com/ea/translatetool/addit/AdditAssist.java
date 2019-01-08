@@ -1,18 +1,18 @@
 package com.ea.translatetool.addit;
 
-import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.Translation;
+import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.config.AppConfig;
 import com.ea.translatetool.config.ConfigRepository;
 import com.ea.translatetool.config.FileConfigRepositoryImpl;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
-import com.ea.translatetool.util.IOUtil;
-import com.ea.translatetool.util.PID;
-import com.ea.translatetool.util.StringUtil;
+import com.ea.translatetool.util.*;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -53,24 +53,27 @@ public class AdditAssist {
 
     public static WorkConfig createWorkConfig(AppConfig config) {
         WorkConfig workConfig = new WorkConfig();
-        HashMap<String, Object> params = new HashMap<String, Object>();
         List<File> files = new ArrayList<>();
-        for (String path : GlobalConstant.AppConfigDefaultValue.IN_PATH) {
+        for (String path : config.getInPath()) {
             files.add(new File(path));
         }
         workConfig.setInput(files);
-        workConfig.setOutput(new File(GlobalConstant.AppConfigDefaultValue.OUT_PATH));
+        workConfig.setOutput(new File(config.getOutPath()));
         workConfig.setOutType(GlobalConstant.OutType.TYPE_JSON);
-
-        workConfig.setLocalMap(loadLocalMap(config.getLocalMapFilePath()));
+        HashMap localMap;
+        try {
+            localMap = loadLocalMap(config.getLocalMapFilePath());
+        } catch (IOException e) {
+            LoggerUtil.error(e.getMessage());
+            localMap = new HashMap();
+        }
+        workConfig.setLocalMap(localMap);
         workConfig.setFilePrefix(config.getFilePrefix());
         workConfig.setFileSuffix(config.getFileSuffix());
         List<File> inputPaths = new ArrayList<>();
         for (String path : config.getInPath()) {
             File file = new File(path);
-            if(file.exists()) {
-                inputPaths.add(file);
-            }
+            inputPaths.add(file);
         }
         workConfig.setInput(inputPaths);
 
@@ -84,7 +87,48 @@ public class AdditAssist {
     }
 
 
-    public static HashMap<String, String> loadLocalMap(String localMapFilePath) {
+    public static HashMap<String, String> loadLocalMap(String localMapFilePath) throws IOException {
+        File file = new File(localMapFilePath);
+        if(!file.exists() || file.isDirectory()) {
+            if(file.isDirectory()) {
+                file = new File(file, GlobalConstant.DEF_LOCAL_MAP_FILE_NAME);
+            }
+            if(!file.getParentFile().exists()) {
+                file.getParentFile().mkdirs();
+            }
+            if(!file.exists()) {
+                file.createNewFile();
+            }
+            InputStream inputStream = null;
+            FileOutputStream outputStream = null;
+            try {
+                inputStream = WindowTool.class.getClassLoader().getResourceAsStream(GlobalConstant.DEF_LOCAL_MAP_FILE_NAME);
+                outputStream = new FileOutputStream(file);
+                byte[] bytes = new byte[1024];
+                int size;
+                while ((size = inputStream.read(bytes)) > 0) {
+                    outputStream.write(bytes, 0, size);
+                }
+            } catch (IOException e) {
+                LoggerUtil.error(e.getMessage());
+            } finally {
+                try {
+                    if(inputStream != null) {
+                        inputStream.close();
+                    }
+                } catch (IOException e) {
+                    LoggerUtil.error(e.getMessage());
+                }
+                try {
+                    if(outputStream != null) {
+                        outputStream.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
         Properties properties = new Properties();
         properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, localMapFilePath);
@@ -92,7 +136,7 @@ public class AdditAssist {
     }
 
 
-    public static TranslationLocator calcTranslationLocator(List<List<String>> excelContent, TranslationLocator locator) {
+    public static TranslationLocator calcTranslationLocator(List<List<String>> excelContent, HashMap<String,String> localMap, TranslationLocator locator) {
 
         if(excelContent == null || excelContent.isEmpty()
                 || excelContent.size() < 3 && excelContent.get(0).size() < 3) {
@@ -140,7 +184,7 @@ public class AdditAssist {
         }
 
         for (int i=0; i<rows; ++i) {
-            localSameLv = calcSimilarLevel(excelContent.get(i), GlobalConstant.REGEX_LOCAL);
+            localSameLv = calcSimilarLocalLevel(excelContent.get(i), localMap);
             if(localSameLv >= maxLocalSameLv) {
                 maxLocalSameLv = localSameLv;
                 localLocator = i;
@@ -152,7 +196,7 @@ public class AdditAssist {
                 for (int j = 0; j < rows; ++j) {
                     columnContents.add(excelContent.get(j).get(i));
                 }
-                localSameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_LOCAL);
+                localSameLv = calcSimilarLocalLevel(columnContents, localMap);
                 if (localSameLv >= maxLocalSameLv) {
                     maxLocalSameLv = localSameLv;
                     localLocator = i;
@@ -208,6 +252,16 @@ public class AdditAssist {
         locator.setOrientation(orientation);
 
         return locator;
+    }
+
+    private static float calcSimilarLocalLevel(List<String> strings, HashMap<String, String> localMap) {
+        float count = 0;
+        for (String s : strings) {
+            if(localMap.containsKey(s)) {
+                ++count;
+            }
+        }
+        return count / strings.size();
     }
 
     public static boolean isValidTranslationLocator(int rows, int columns, TranslationLocator locator) {

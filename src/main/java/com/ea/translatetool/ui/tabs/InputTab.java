@@ -1,5 +1,6 @@
 package com.ea.translatetool.ui.tabs;
 
+import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.config.WorkConfig;
@@ -7,7 +8,6 @@ import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
 import com.ea.translatetool.ui.component.TranslateFileJTable;
 import com.ea.translatetool.util.ExcelUtil;
-import com.ea.translatetool.util.IOUtil;
 import com.ea.translatetool.util.LoggerUtil;
 
 import javax.swing.*;
@@ -20,11 +20,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
 import java.util.*;
 import java.util.List;
 
 public class InputTab extends JPanel implements ActionListener{
+    private UI ui;
     private WorkConfig workConfig;
     private JPanel contentPanel;
     private TreeMap<String, List<File>> excelFiles;
@@ -32,6 +32,7 @@ public class InputTab extends JPanel implements ActionListener{
     private HashMap<String, JTable> tableViewMap;
 
     public InputTab(UI parent) {
+        this.ui = parent;
         this.excelFiles = new TreeMap<>();
         this.updateList = new TreeSet<>();
         this.tableViewMap = new HashMap<>();
@@ -47,11 +48,33 @@ public class InputTab extends JPanel implements ActionListener{
         listScrollPage.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         listScrollPage.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         add(listScrollPage, BorderLayout.CENTER);
-        File[] files = new File[workConfig.getInput().size()];
-        for (int i=0; i<workConfig.getInput().size(); ++i) {
-            files[i] = workConfig.getInput().get(i);
+        loadExcelFiles();
+    }
+
+    private void loadExcelFiles() {
+        updateList.clear();
+        Object result = Addit.doWork(workConfig, Addit.WORK_SCAN_FILE, Addit.WORK_SCAN_FILE, ui);
+        if(result == null) {
+            return;
         }
-        scanExcelFiles(files);
+
+        List<File> fileList = (List<File>) result;
+        for (File f:fileList) {
+            String key = f.getParent();
+            List<File> oldFileList = excelFiles.get(key);
+            if(oldFileList == null) {
+                oldFileList = new ArrayList<>();
+                oldFileList.add(f);
+                excelFiles.put(key, oldFileList);
+            } else if(!oldFileList.contains(f)){
+                oldFileList.add(f);
+            }
+            updateList.add(key);
+        }
+
+        if(!updateList.isEmpty()) {
+            showFileListTable();
+        }
     }
 
     private void showFileListTable() {
@@ -91,7 +114,7 @@ public class InputTab extends JPanel implements ActionListener{
                 dataModel.setValueAt(file.getName(), i, 1);
                 try {
                     TranslationLocator locator = AdditAssist.calcTranslationLocator(
-                            ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0 ), null);
+                            ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0 ), workConfig.getLocalMap(), null);
                     if(locator != null) {
                         dataModel.setValueAt(true, i, 0);
                         if(locator.getKeyLocator() != null) {
@@ -168,10 +191,11 @@ public class InputTab extends JPanel implements ActionListener{
         Set<String> keys = tableViewMap.keySet();
         for (String key : keys) {
             JTable tableView = tableViewMap.get(key);
-            DefaultTableModel tableModel = (DefaultTableModel) tableView.getModel();
+            AbstractTableModel tableModel = (AbstractTableModel) tableView.getModel();
             for (int i=0; i<tableModel.getRowCount(); ++i) {
                 tableModel.setValueAt(checked, i, 0);
             }
+            tableView.updateUI();
         }
     }
 
@@ -214,61 +238,17 @@ public class InputTab extends JPanel implements ActionListener{
                     return;
                 }
             }
-            scanExcelFiles(files);
-        }
 
-    }
-
-    private void scanExcelFiles(File[] files) {
-        updateList.clear();
-        for (File file : files) {
-            boolean addNew = false;
-            List<File> newFileList = null;
-            String key;
-            if(file.isDirectory()) {
-                key = file.getAbsolutePath();
-                newFileList = IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
-                    @Override
-                    public boolean accept(File entry) throws IOException {
-                        if(entry.isFile()  && !entry.getName().startsWith("~$")
-                                && (entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
-                                || entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX))) {
-                            return true;
-                        }
-                        return false;
-                    }
-                });
-            } else {
-                key = file.getParent();
-            }
-            List<File> oldFileList = excelFiles.get(key);
-            if(oldFileList == null) {
-                oldFileList = new ArrayList<>();
-                excelFiles.put(key, oldFileList);
-            }
-            if(file.isDirectory()) {
-                if (!newFileList.isEmpty()) {
-                    for (File f : newFileList) {
-                        if (!oldFileList.contains(f)) {
-                            oldFileList.add(f);
-                            addNew = true;
-                        }
-                    }
-                }
-            } else {
-                if (!oldFileList.contains(file)) {
-                    oldFileList.add(file);
-                    addNew = true;
+            workConfig.getInput().clear();
+            for (File file : files) {
+                if(!workConfig.getInput().contains(file)) {
+                    workConfig.getInput().add(file);
                 }
             }
-            if(addNew) {
-                updateList.add(key);
-            }
+
+            loadExcelFiles();
         }
 
-        if(!updateList.isEmpty()) {
-            showFileListTable();
-        }
     }
 
     public HashMap<String, JTable> getTableViewMap() {

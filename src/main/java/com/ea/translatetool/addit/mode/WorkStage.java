@@ -6,7 +6,6 @@ import java.util.Date;
  * Created by HeRui on 2018/12/24.
  */
 public class WorkStage {
-    private int group;
     private int index;
     private int count;
     private int type;
@@ -18,8 +17,7 @@ public class WorkStage {
 
     public WorkStage() {}
 
-    public WorkStage(int group, int index, int count, int type, String name, String desc, Date start, Date end, boolean success) {
-        this.group = group;
+    public WorkStage(int index, int count, int type, String name, String desc, Date start, Date end, boolean success) {
         this.index = index;
         this.count = count;
         this.type = type;
@@ -28,14 +26,6 @@ public class WorkStage {
         this.start = start;
         this.end = end;
         this.success = success;
-    }
-
-    public int getGroup() {
-        return group;
-    }
-
-    public void setGroup(int group) {
-        this.group = group;
     }
 
     public int getIndex() {

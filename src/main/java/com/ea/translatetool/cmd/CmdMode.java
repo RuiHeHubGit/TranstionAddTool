@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -41,7 +40,7 @@ public class CmdMode {
 
     private CmdMode(App app) {
         this.app = app;
-        translations = new ArrayList<Translation>();
+        translations = new ArrayList<>();
         workConfig = AdditAssist.createWorkConfig(app.getAppConfig());
         exitStatus = 1;
         addShutdownHandler();
@@ -63,13 +62,13 @@ public class CmdMode {
     }
 
     private void doStart(WorkConfig config) {
-        Addit.start(config, 0, new WorkCallback() {
+        Addit.doWork(config, Addit.WORK_SCAN_FILE, Addit.WORK_TRANSLATION_TO_FILE, new WorkCallback() {
 
             @Override
             public void onStart(WorkStage stage) {
                 WindowTool.getInstance().enableSystemMenu(com.ea.translatetool.util.WindowTool.SC_CLOSE, false);
                 if(stage.getIndex() == 1) {
-                    System.out.println("start ..");
+                    System.out.println("doWork ..");
                 }
                 System.out.println(stage.getName()+" ("+stage.getIndex()+"/"+stage.getCount()+")");
             }
@@ -165,7 +164,7 @@ public class CmdMode {
     // 解析处理命令行参数
     private WorkConfig parseOptions(String[] args, WorkConfig config, int mode) throws IOException, InterruptedException {
         if(config == null) {
-            config = new WorkConfig();
+            config = AdditAssist.createWorkConfig(app.getAppConfig());
         }
         CommandLineParser parser = new DefaultParser();
         CommandLine line = null;
@@ -276,7 +275,7 @@ public class CmdMode {
         String line;
         try {
             byte[] startBytes = "> ".getBytes();
-            System.out.write("\nnow entry input mode, please set the parameters and input 'start' cmd to work.\n".getBytes());
+            System.out.write("\nnow entry input mode, please set the parameters and input 'doWork' cmd to work.\n".getBytes());
             System.out.write("input cmd of 'help' look for help of input mode.\n".getBytes());
             System.out.write(startBytes);
             List<String> notEndCmdLines = new ArrayList<>();
@@ -287,7 +286,7 @@ public class CmdMode {
                     case "help":
                         printInputModeHelp();
                         break;
-                    case "start":
+                    case "doWork":
                         doStart(config);
                         break;
                     case "dll":
@@ -392,11 +391,14 @@ public class CmdMode {
         System.out.println("l                          show the list of keys.");
         System.out.println("o <dir>;                   set out dir.");
         System.out.println("ot <[json|xml]>;           set out type,default is json.");
-        System.out.println("start                      start do work.");
+        System.out.println("doWork                      doWork do work.");
     }
 
 
     public static void showProgress(long complete, long total, int psWidth) {
+        if(total == 0) {
+            return;
+        }
         float p = 1.0f * complete / total;
         int c = (int)(psWidth * p);
         int s = psWidth-c;

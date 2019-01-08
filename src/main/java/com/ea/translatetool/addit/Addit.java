@@ -16,8 +16,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Addit {
+    public final static int WORK_SCAN_FILE = 0;
+    public final static int WORK_LOAD_TRANSLATION = 1;
+    public final static int WORK_TRANSLATION_TO_FILE = 2;
+
     private volatile static boolean running;
     private static Addit  addit;
     private WorkConfig workConfig;
@@ -25,7 +31,6 @@ public class Addit {
     private List<File> sourceFiles;
     private int stage;
     private int stageCount;
-    private int mode;
     private WorkStage workStage;
 
     private Addit() {
@@ -40,29 +45,27 @@ public class Addit {
         return addit;
     }
 
-    public static void start(WorkConfig workConfig, int mode, WorkCallback callback) {
+    public static Object doWork(WorkConfig workConfig, int startWork, int endWork, WorkCallback callback) {
+        Object result = null;
         Addit addit = getInstance();
         addit.mergeNewAddTranslate(workConfig);
-        addit.mode = mode;
         try {
             running = true;
-            if(mode == 0) {
+            addit.stageCount = endWork-startWork+1;
+            for (; startWork <= endWork; ++startWork) {
                 addit.stage = 1;
-                addit.stageCount = 3;
-                addit.loadTranslateFiles(workConfig, callback);
-                addit.stage = 2;
-                addit.loadAllTranslate(workConfig, callback);
-            } else if(mode == 1) {
-                addit.stage = 1;
-                addit.stageCount = 2;
-                addit.loadAllTranslate(workConfig, callback);
-            } else {
-                addit.stage = 1;
-                addit.stageCount = 1;
+                switch (startWork) {
+                    case WORK_SCAN_FILE:
+                        result = addit.scanTranslateFiles(workConfig, callback);
+                        break;
+                    case WORK_LOAD_TRANSLATION:
+                        addit.loadAllTranslate(workConfig, callback);
+                        break;
+                    case WORK_TRANSLATION_TO_FILE:
+                        addit.translationToFile(workConfig, callback);
+                        break;
+                }
             }
-
-            addit.stage = addit.stageCount;
-            addit.doWork(workConfig, callback);
         } catch (Exception e) {
             addit.workStage.setSuccess(false);
             LoggerUtil.error(e.getMessage());
@@ -72,11 +75,12 @@ public class Addit {
                 addit.onDone(callback, addit.workStage);
             }
         }
+        return result;
     }
 
-    private void doWork(WorkConfig workConfig, WorkCallback callback) throws IOException {
+    private void translationToFile(WorkConfig workConfig, WorkCallback callback) throws IOException {
 
-        workStage = new WorkStage(mode, stage, stageCount, 3, "add translate to file", "", new Date(), null, true);
+        workStage = new WorkStage(stage, stageCount, 3, "add translate to file", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
@@ -139,13 +143,15 @@ public class Addit {
                 localFile.getParentFile().mkdirs();
             localFile.createNewFile();
         }
+
         List<String> lines = IOUtil.readText(localFile, null);
         if(lines.isEmpty() && outType == GlobalConstant.OutType.TYPE_JSON) {
             lines.add("{");
             lines.add("}");
         }
+
         for (Translation translation : localAllTranslations) {
-            if(!insertStringToListOnLastSameIndex(lines, translateToLineString(translation, outType), getDivisionCharByType(outType), cover)) {
+            if(!insertStringToListOnLastSameIndex(lines, translateToLineString(translation, outType, lines), getDivisionCharByType(outType), cover)) {
                 notSaveTranslationList.add(translation);
             }
         }
@@ -196,12 +202,22 @@ public class Addit {
         return true;
     }
 
-    private String translateToLineString(Translation translation, GlobalConstant.OutType outType) {
+    private String translateToLineString(Translation translation, GlobalConstant.OutType outType, List<String> lines) {
         String key = translation.getKey().trim();
         String translateText = translation.getTranslation().replace("\"", "\\\"").trim();
+
         switch (outType) {
             case TYPE_JSON:
-                return "\t\""+key+"\":\""+translateText+"\",";
+                String preSpace = "    ";
+                Pattern preSpacePattern = Pattern.compile("^(\\s+)\".+");
+                for (String line : lines) {
+                    Matcher matcher = preSpacePattern.matcher(line);
+                    if(matcher.matches()) {
+                        preSpace = matcher.group(1);
+                        break;
+                    }
+                }
+                return preSpace+"\""+key+"\":\""+translateText+"\",";
             case TYPE_PRO:
                 return key+"=\""+translateText+"\"";
             default:
@@ -222,21 +238,22 @@ public class Addit {
             translationList.addAll(list);
     }
 
-    public void loadTranslateFiles(WorkConfig workConfig, WorkCallback callback) throws NotFoundExcelException, IOException {
+    private List<File> scanTranslateFiles(WorkConfig workConfig, WorkCallback callback) throws NotFoundExcelException {
         List<File> inputPathList = workConfig.getInput();
-        workStage =  new WorkStage(mode, stage, stageCount, 3, "load files", "", new Date(), null, true);
+        List<File> newList = new ArrayList<>();
+        workStage =  new WorkStage(stage, stageCount, 3, "scan files", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
         if(sourceFiles == null) {
             sourceFiles = new ArrayList<>();
         }
-        sourceFiles.clear();
+
         int i = 0;
         for (final File file : inputPathList) {
             List<File> files =  IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
                 @Override
-                public boolean accept(File entry) throws IOException {
+                public boolean accept(File entry) {
                     if(entry.isFile()
                             && !entry.getName().startsWith("~$")
                             && (entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
@@ -246,27 +263,33 @@ public class Addit {
                     return false;
                 }
             });
-            sourceFiles.addAll(files);
+            newList.addAll(files);
             if(callback != null) {
-                callback.onProgress(++i, sourceFiles.size());
+                callback.onProgress(++i, inputPathList.size());
             }
         }
 
-        if(callback != null) {
-            callback.onProgress(sourceFiles.size(), sourceFiles.size());
+        List<File> resultList = new ArrayList<>();
+        for (File file : newList) {
+            if(!sourceFiles.contains(file)) {
+                resultList.add(file);
+            }
         }
 
-        if(sourceFiles.isEmpty()) {
-            NotFoundExcelException exception = new NotFoundExcelException("Not found file of excel in the specific path.");
-            if(callback != null) callback.onError(exception);
-            throw exception;
+        sourceFiles.addAll(resultList);
+        if(callback != null) {
+            callback.onProgress(i, inputPathList.size());
         }
-        
         onDone(callback, workStage);
+
+        return resultList;
     }
 
-    private void loadAllTranslate(WorkConfig workConfig, WorkCallback callback) throws IOException, InvalidExcelContentException {
-        workStage = new WorkStage(mode, stage, stageCount, 3, "load translate", "", new Date(), null, true);
+    private void loadAllTranslate(WorkConfig workConfig, WorkCallback callback) throws IOException, InvalidExcelContentException, NotFoundExcelException {
+        if(sourceFiles.isEmpty()) {
+            throw new NotFoundExcelException("not excel file");
+        }
+        workStage = new WorkStage(stage, stageCount, 3, "load translate", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
@@ -300,7 +323,7 @@ public class Addit {
 
         if(excelContent.size() > 0) {
             if(translationLocator == null) {
-                translationLocator = AdditAssist.calcTranslationLocator(excelContent, translationLocatorMap.get(file.getAbsolutePath()));
+                translationLocator = AdditAssist.calcTranslationLocator(excelContent, localMap, translationLocatorMap.get(file.getAbsolutePath()));
                 if(translationLocator == null) {
                     throw new InvalidExcelContentException("parse failed:"+file.getAbsolutePath());
                 }
@@ -376,5 +399,13 @@ public class Addit {
             }
             callback.onDone(workStage);
         }
+    }
+
+    public boolean setSourceFiles(List<File> sourceFiles) {
+        if(running) {
+            return false;
+        }
+        this.sourceFiles = sourceFiles;
+        return true;
     }
 }

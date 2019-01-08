@@ -28,10 +28,11 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
-public class UI extends JFrame {
+public class UI extends JFrame implements WorkCallback{
     private static UI ui;
     private final App app;
     private WorkConfig workConfig;
@@ -46,7 +47,6 @@ public class UI extends JFrame {
     private JLabel lbStage;
     private JProgressBar progressBar;
     private JButton btnStart;
-    private int mode;
 
     private UI(App app) {
         this.app = app;
@@ -66,20 +66,23 @@ public class UI extends JFrame {
 
         HashMap<String, JTable> tableHashMap = inputTab.getTableViewMap();
         Set<String> keys = tableHashMap.keySet();
-        workConfig.getInput().clear();
         workConfig.getTranslationLocatorMap().clear();
+        ArrayList<File> fileList = new ArrayList<>();
         for (String key : keys) {
             JTable jTable = tableHashMap.get(key);
             TableModel tableModel = jTable.getModel();
             for (int i=0; i<tableModel.getRowCount(); ++i) {
                 if((boolean)tableModel.getValueAt(i, 0)) {
+                    if(!(Boolean)tableModel.getValueAt(i, 0)) {
+                        continue;
+                    }
                     File file = new File(key, (String) tableModel.getValueAt(i, 1));
-                    workConfig.getInput().add(file);
-                    if(tableModel.getValueAt(i, 2) == null) {
+                    fileList.add(file);
+                    if(tableModel.getValueAt(i, 0) == null) {
                         continue;
                     }
                     TranslationLocator locator = new TranslationLocator();
-                    getWorkConfig().getTranslationLocatorMap().put(file.getAbsolutePath(), locator);
+                    workConfig.getTranslationLocatorMap().put(file.getAbsolutePath(), locator);
                     locator.setKeyLocator((String) tableModel.getValueAt(i, 2));
                     String ori = (String) tableModel.getValueAt(i, 3);
                     if(ori != null) {
@@ -91,75 +94,23 @@ public class UI extends JFrame {
             }
         }
 
-        if(workConfig.getInput().isEmpty()) {
+        if(fileList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please add excel file.", "prompt", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+        Addit.getInstance().setSourceFiles(fileList);
+
+        final File outPath = new File(outputTab.getOutPath());
+        if(!outPath.exists() && !outPath.isDirectory()) {
+            JOptionPane.showMessageDialog(this, "Invalid path fo out,please reset it.", "prompt", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        workConfig.setOutput(outPath);
 
         new Thread(new Runnable() {
             @Override
             public void run() {
-                Addit.start(ui.workConfig, mode, new WorkCallback() {
-                    @Override
-                    public void onStart(WorkStage stage) {
-                        if(stage.getIndex() == 1) {
-                            System.out.println("start ..");
-                        }
-                        String stageInfo = String.format("\n%d/%d %s start\n",
-                                stage.getIndex(),
-                                stage.getCount(),
-                                stage.getName());
-                        System.out.println(stageInfo);
-                        lbStage.setText(stageInfo);
-                    }
-
-                    @Override
-                    public void onProgress(long complete, long total) {
-                        CmdMode.showProgress(complete, total, 50);
-                        updateProgressBar(complete, total);
-                    }
-
-                    @Override
-                    public void onDone(WorkStage stage) {
-                        String stageInfo = String.format("\n%d/%d %s %s\n",
-                                stage.getIndex(),
-                                stage.getCount(),
-                                stage.getName(),
-                                stage.isSuccess()?"finished." : "failed.");
-                        System.out.println(stageInfo);
-                        lbStage.setText(stageInfo);
-                    }
-
-                    @Override
-                    public boolean onError(Throwable t) {
-                        if(t instanceof AlreadyExistKeyException) {
-                            if(app.getAppConfig().isCoverKey()) {
-                                return false;
-                            }
-                            try {
-                                AdditAssist.saveKeyExistTranslation(((AlreadyExistKeyException) t).getExistList(),
-                                        AdditAssist.createExistKeySaveFile(app.getAppConfig()));
-                            } catch (IOException e) {
-                                LoggerUtil.error(e.getMessage());
-                            }
-                            return true;
-                        } else {
-                            LoggerUtil.exceptionLog(t);
-                            String msg = t.getMessage();
-                            if (msg == null) msg = "Unknown error.";
-                            if(t instanceof InvalidExcelContentException) {
-                                if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(ui,
-                                        msg + "\nDo you want to continue?", "warning", JOptionPane.YES_NO_OPTION,
-                                        JOptionPane.WARNING_MESSAGE)) {
-                                    return false;
-                                }
-                            } else {
-                                JOptionPane.showMessageDialog(ui, msg, "error", JOptionPane.ERROR_MESSAGE);
-                            }
-                            return true;
-                        }
-                    }
-                });
+                Addit.doWork(ui.workConfig, Addit.WORK_LOAD_TRANSLATION, Addit.WORK_TRANSLATION_TO_FILE, ui);
             }
         }).start();
     }
@@ -188,14 +139,13 @@ public class UI extends JFrame {
         ui.workConfig = AdditAssist.createWorkConfig(app.getAppConfig());
         ui.addShutdownHandler();
         ui.initUI();
-        ui.mode = 0;
     }
 
     private void initUI() {
         mainContainer = this.getContentPane();
         initWindow();
-        initTab();
         initFoodPanel();
+        initTab();
     }
 
     private void initFoodPanel() {
@@ -338,5 +288,67 @@ public class UI extends JFrame {
 
     public WorkConfig getWorkConfig() {
         return workConfig;
+    }
+
+
+    @Override
+    public void onStart(WorkStage stage) {
+        if(stage.getIndex() == 1) {
+            System.out.println("doWork ..");
+        }
+        String stageInfo = String.format("\n%d/%d %s doWork\n",
+                stage.getIndex(),
+                stage.getCount(),
+                stage.getName());
+        System.out.println(stageInfo);
+        lbStage.setText(stageInfo);
+    }
+
+    @Override
+    public void onProgress(long complete, long total) {
+        CmdMode.showProgress(complete, total, 50);
+        updateProgressBar(complete, total);
+    }
+
+    @Override
+    public void onDone(WorkStage stage) {
+        String stageInfo = String.format("\n%d/%d %s %s\n",
+                stage.getIndex(),
+                stage.getCount(),
+                stage.getName(),
+                stage.isSuccess()?"finished." : "failed.");
+        System.out.println(stageInfo);
+        lbStage.setText(stageInfo);
+        outputTab.showFileListTable();
+    }
+
+    @Override
+    public boolean onError(Throwable t) {
+        if(t instanceof AlreadyExistKeyException) {
+            if(app.getAppConfig().isCoverKey()) {
+                return false;
+            }
+            try {
+                AdditAssist.saveKeyExistTranslation(((AlreadyExistKeyException) t).getExistList(),
+                        AdditAssist.createExistKeySaveFile(app.getAppConfig()));
+            } catch (IOException e) {
+                LoggerUtil.error(e.getMessage());
+            }
+            return true;
+        } else {
+            LoggerUtil.exceptionLog(t);
+            String msg = t.getMessage();
+            if (msg == null) msg = "Unknown error.";
+            if(t instanceof InvalidExcelContentException) {
+                if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(ui,
+                        msg + "\nDo you want to continue?", "warning", JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE)) {
+                    return false;
+                }
+            } else {
+                JOptionPane.showMessageDialog(ui, msg, "error", JOptionPane.ERROR_MESSAGE);
+            }
+            return true;
+        }
     }
 }
