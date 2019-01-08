@@ -245,9 +245,6 @@ public class Addit {
         if(callback != null) {
             callback.onStart(workStage);
         }
-        if(sourceFiles == null) {
-            sourceFiles = new ArrayList<>();
-        }
 
         int i = 0;
         for (final File file : inputPathList) {
@@ -336,7 +333,9 @@ public class Addit {
                     && translationLocator.getOrientation() == GlobalConstant.Orientation.VERTICAL.ordinal()) {
                 for (int i=0; i<excelContent.size(); ++i) {
                     List<String> row = excelContent.get(i);
-                    List<Translation> translations = AdditAssist.getTranslationList(row, translationLocator, localMap, keys.get(i));
+                    List<Translation> translations = AdditAssist.getTranslationList(keys.get(i),
+                            row.get(translationLocator.getLocalLocator()),
+                            row.get(translationLocator.getTranslationLocator()), localMap);
                     if(translations != null) {
                         translationList.addAll(translations);
                     }
@@ -349,7 +348,9 @@ public class Addit {
                     for (int j=0; j < excelContent.size(); ++j) {
                         columnTexts.add(excelContent.get(j).get(i));
                     }
-                    List<Translation> translations = AdditAssist.getTranslationList(columnTexts, translationLocator, localMap, keys.get(i));
+                    List<Translation> translations = AdditAssist.getTranslationList(keys.get(i),
+                            columnTexts.get(translationLocator.getLocalLocator()),
+                            columnTexts.get(translationLocator.getTranslationLocator()), localMap);
                     columnTexts.clear();
                     if(translations != null) {
                         translationList.addAll(translations);
@@ -359,11 +360,11 @@ public class Addit {
                 List<String> locals = AdditAssist.getTranslationLocals(excelContent, translationLocator);
                 for (int i=0; i<keys.size(); ++i) {
                     for (int j=0; j<locals.size(); ++j) {
-                        List<Translation> translations = null;
+                        List<Translation> translations;
                         if(translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal())
-                            translations = AdditAssist.getTranslationList(excelContent, localMap, keys.get(i), locals.get(j), i, j);
+                            translations = AdditAssist.getTranslationList(keys.get(i), locals.get(j), excelContent.get(i).get(j), localMap);
                         else
-                            translations = AdditAssist.getTranslationList(excelContent, localMap, keys.get(i), locals.get(j), j, i);
+                            translations = AdditAssist.getTranslationList( keys.get(i), locals.get(j), excelContent.get(j).get(i), localMap);
                         if(translations != null) {
                             translationList.addAll(translations);
                         }

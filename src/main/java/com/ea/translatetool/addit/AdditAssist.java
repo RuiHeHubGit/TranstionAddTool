@@ -360,31 +360,14 @@ public class AdditAssist {
         return locals;
     }
 
-    public static List<Translation> getTranslationList(List<String> texts, TranslationLocator translationLocator, HashMap<String, String> localMap, String key) {
-        String local = texts.get(translationLocator.getLocalLocator());
-        String translateText = texts.get(translationLocator.getTranslationLocator());
-        if(translateText.isEmpty()
-                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()
-                || !Pattern.compile(GlobalConstant.REGEX_LOCAL).matcher(local).matches()) {
-            return null;
-        }
-
-        return getTranslationList(key, local, translateText, localMap);
-    }
-
-    public static List<Translation> getTranslationList(List<List<String>> excelContent, HashMap<String, String> localMap, String key, String local, int row, int col) {
-        String translateText = excelContent.get(row).get(col);
-        if(translateText.isEmpty()
-                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()
-                || !Pattern.compile(GlobalConstant.REGEX_LOCAL).matcher(local).matches()) {
-            return null;
-        }
-
-        return getTranslationList(key, local, translateText, localMap);
-    }
-
-    private static List<Translation> getTranslationList(String key, String local, String translateText, HashMap<String, String> localMap) {
+    public static List<Translation> getTranslationList(String key, String local, String translateText, HashMap<String, String> localMap) {
         List<Translation> translations = new ArrayList<>();
+        if(translateText.isEmpty()
+                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()
+                || !localMap.containsKey(local)) {
+            return translations;
+        }
+
         String localStr = localMap.get(local);
         if(localStr == null) {
             localStr = local;

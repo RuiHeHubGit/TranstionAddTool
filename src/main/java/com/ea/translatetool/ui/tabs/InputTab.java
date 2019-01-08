@@ -52,7 +52,6 @@ public class InputTab extends JPanel implements ActionListener{
     }
 
     private void loadExcelFiles() {
-        updateList.clear();
         Object result = Addit.doWork(workConfig, Addit.WORK_SCAN_FILE, Addit.WORK_SCAN_FILE, ui);
         if(result == null) {
             return;
@@ -137,6 +136,7 @@ public class InputTab extends JPanel implements ActionListener{
             jTable.setModel(dataModel);
         }
         contentPanel.updateUI();
+        updateList.clear();
     }
 
     private void initBtnGroup() {
@@ -204,6 +204,7 @@ public class InputTab extends JPanel implements ActionListener{
         tableViewMap.clear();
         contentPanel.removeAll();
         contentPanel.updateUI();
+        Addit.getInstance().getSourceFiles().clear();
     }
 
     private void addInputPath() {
@@ -241,11 +242,8 @@ public class InputTab extends JPanel implements ActionListener{
 
             workConfig.getInput().clear();
             for (File file : files) {
-                if(!workConfig.getInput().contains(file)) {
-                    workConfig.getInput().add(file);
-                }
+                workConfig.getInput().add(file);
             }
-
             loadExcelFiles();
         }
 
