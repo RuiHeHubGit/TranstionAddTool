@@ -58,6 +58,6 @@ public class App {
         Properties properties = new Properties();
         properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, GlobalConstant.CONFIG_FILE_PATH);
         appConfig = configRepository.load(AppConfig.class, properties);
-        System.getProperty("logLevel", appConfig.getLogLevel());
+        System.getProperty(LoggerUtil.LOG_LEVEL, appConfig.getLogLevel());
     }
 }

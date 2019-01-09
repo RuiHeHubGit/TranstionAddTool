@@ -9,6 +9,7 @@ import com.ea.translatetool.addit.exception.InvalidExcelContentException;
 import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
+import com.ea.translatetool.config.AppConfig;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.tabs.InputTab;
@@ -199,7 +200,7 @@ public class UI extends JFrame implements WorkCallback{
         tabbedPane = new JTabbedPane();
         inputTab = new InputTab(this);
         outputTab = new OutputTab(this);
-        settingTab = new SettingTab();
+        settingTab = new SettingTab(this);
 
         mainContainer.add(tabbedPane, BorderLayout.CENTER);
         tabbedPane.add("input", inputTab);
@@ -290,6 +291,9 @@ public class UI extends JFrame implements WorkCallback{
         return workConfig;
     }
 
+    public AppConfig getAppConfig() {
+        return app.getAppConfig();
+    }
 
     @Override
     public void onStart(WorkStage stage) {
