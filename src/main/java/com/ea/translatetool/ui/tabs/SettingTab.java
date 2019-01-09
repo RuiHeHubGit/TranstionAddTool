@@ -6,6 +6,7 @@ import com.ea.translatetool.ui.component.FileListTable;
 import com.ea.translatetool.util.ExcelUtil;
 
 import javax.swing.*;
+import javax.swing.border.BevelBorder;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.table.DefaultTableModel;
 
@@ -30,7 +31,7 @@ public class SettingTab extends JPanel{
     private JTextField jfFilePrefix;
     private JTextField jfFileSuffix;
     private JCheckBox jcbIsCoverKey;
-    private List<File> inPaths;
+    private List<String> inPaths;
 
 
     public SettingTab(UI ui) {
@@ -67,7 +68,6 @@ public class SettingTab extends JPanel{
         fixPanel.add(createEditPanel("File Suffix:", jfFileSuffix));
         settingPanel.add(fixPanel);
 
-        settingPanel.add(Box.createVerticalStrut(10));
         JPanel boxPanel = new JPanel();
         boxPanel.setLayout(new BoxLayout(boxPanel, BoxLayout.LINE_AXIS));
         boxPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -79,23 +79,81 @@ public class SettingTab extends JPanel{
         boxPanel.add(jcbIsCoverKey);
         settingPanel.add(boxPanel);
 
-        settingPanel.add(Box.createVerticalStrut(10));
+        settingPanel.add(Box.createVerticalStrut(20));
+        settingPanel.add(createInPathPanel());
+
+        inPaths = new ArrayList<>();
+        for (String path : config.getInPath()) {
+            if(!inPaths.contains(path)) {
+                inPaths.add(path);
+            }
+        }
+        updateInPathListTable();
+    }
+
+    private Component createInPathPanel() {
+        final JButton btnRemove = new JButton("remove");
+        JButton btnClear = new JButton("clear");
         JButton btnAddInPath = new JButton("add");
+        final JCheckBox jcbAll = new JCheckBox("all", true);
+        btnRemove.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultTableModel tableModel = (DefaultTableModel) jtInPath.getModel();
+                for (int i=0; i<tableModel.getRowCount(); ++i) {
+                    if((Boolean) tableModel.getValueAt(i, 1)) {
+                        tableModel.removeRow(i);
+                        --i;
+                    }
+                }
+                jtInPath.updateUI();
+            }
+        });
+        btnClear.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ((DefaultTableModel)jtInPath.getModel()).setRowCount(0);
+                jtInPath.updateUI();
+            }
+        });
+        jcbAll.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean checked = null != jcbAll.getSelectedObjects();
+                for (int i=0; i<jtInPath.getRowCount(); ++i) {
+                    jtInPath.setValueAt(checked, i, 1);
+                }
+                jtInPath.updateUI();
+            }
+        });
         btnAddInPath.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 addInPath();
             }
         });
-        JPanel inPathListTop = new JPanel(new BorderLayout());
-        inPathListTop.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        inPathListTop.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        inPathListTop.add(new JLabel("int path"), BorderLayout.WEST);
-        inPathListTop.add(btnAddInPath, BorderLayout.EAST);
-        settingPanel.add(inPathListTop);
-        settingPanel.add(jtInPath);
-        inPaths = new ArrayList<>();
-        updateInPathListTable();
+        JPanel inPathListTop = new JPanel();
+        inPathListTop.setLayout(new BoxLayout(inPathListTop, BoxLayout.LINE_AXIS));
+        inPathListTop.add(Box.createHorizontalGlue());
+        inPathListTop.add(btnRemove);
+        inPathListTop.add(Box.createHorizontalStrut(15));
+        inPathListTop.add(btnClear);
+        inPathListTop.add(Box.createHorizontalStrut(15));
+        inPathListTop.add(btnAddInPath);
+        inPathListTop.add(Box.createHorizontalStrut(15));
+        inPathListTop.add(jcbAll);
+
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+        tablePanel.add(inPathListTop, BorderLayout.NORTH);
+        jtInPath.setMinimumSize(new Dimension(Integer.MAX_VALUE, 20));
+        tablePanel.add(jtInPath, BorderLayout.CENTER);
+
+        JPanel InPathPanel = new JPanel(new BorderLayout(5, 5));
+        InPathPanel.add(new JLabel("In Path"), BorderLayout.NORTH);
+        InPathPanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 5));
+        InPathPanel.add(tablePanel);
+        return InPathPanel;
     }
 
     private void addInPath() {
@@ -134,7 +192,7 @@ public class SettingTab extends JPanel{
             boolean needUpdate = false;
             for (File file : files) {
                 if(!inPaths.contains(file)) {
-                    inPaths.add(file);
+                    inPaths.add(file.getAbsolutePath());
                     needUpdate = true;
                 }
             }
@@ -148,11 +206,11 @@ public class SettingTab extends JPanel{
     private void updateInPathListTable() {
         DefaultTableModel tableModel = (DefaultTableModel) jtInPath.getModel();
         tableModel.setColumnCount(2);
-        tableModel.setRowCount(config.getInPath().length);
+        tableModel.setRowCount(inPaths.size());
         int index = 0;
-        for (String path : config.getInPath()) {
+        for (String path : inPaths) {
             tableModel.setValueAt(path, index, 0);
-            tableModel.setValueAt("remove", index++, 1);
+            tableModel.setValueAt(true, index++, 1);
         }
         jtInPath.updateUI();
     }

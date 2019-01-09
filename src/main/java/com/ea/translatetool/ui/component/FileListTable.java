@@ -1,10 +1,7 @@
 package com.ea.translatetool.ui.component;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
-import javax.swing.table.TableColumn;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,8 +9,8 @@ import java.awt.event.ActionListener;
 public class FileListTable extends JTable {
 
     private DefaultTableCellRenderer tcr;
-    private JButtonTableCellRenderer jButtonTableCellRenderer;
-    private ActionListener btnActionListener;
+    private JCheckBoxEditor jCheckBoxEditor;
+    private JCheckBoxTableCellRenderer jCheckBoxTableCellRenderer;
 
     public FileListTable() {
 
@@ -30,42 +27,40 @@ public class FileListTable extends JTable {
             }
         };
 
-        btnActionListener = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                DefaultTableModel tableModel = (DefaultTableModel) getModel();
-                tableModel.removeRow(getSelectedRow());
-                updateUI();
-            }
-        };
-
-        jButtonTableCellRenderer = new JButtonTableCellRenderer();
+        jCheckBoxEditor = new JCheckBoxEditor(true);
+        jCheckBoxTableCellRenderer = new JCheckBoxTableCellRenderer();
     }
 
     @Override
-    public boolean isCellEditable(int row, int column) {
-        return false;
+    public TableCellEditor getCellEditor(int row, int column) {
+        if(column == 1) {
+            return jCheckBoxEditor;
+        }
+        return super.getCellEditor(row, column);
     }
 
     @Override
     public TableCellRenderer getCellRenderer(int row, int column) {
         if(column == 1) {
             TableColumn firstColumn = getColumnModel().getColumn(1);
-            firstColumn.setPreferredWidth(70);
-            firstColumn.setMaxWidth(70);
-            firstColumn.setMinWidth(70);
-            return jButtonTableCellRenderer;
+            firstColumn.setPreferredWidth(30);
+            firstColumn.setMaxWidth(30);
+            firstColumn.setMinWidth(30);
+            return jCheckBoxTableCellRenderer;
         }
         return tcr;
     }
 
-    class JButtonTableCellRenderer implements TableCellRenderer {
+    class JCheckBoxEditor extends DefaultCellEditor {
+        public JCheckBoxEditor(boolean checked) {
+            super(new JCheckBox(null, null, checked));
+        }
+    }
 
+    class JCheckBoxTableCellRenderer implements TableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            JButton btnRemove = new JButton((String) value);
-            btnRemove.addActionListener(btnActionListener);
-            return btnRemove;
+            return new JCheckBox(null, null, (Boolean) value);
         }
     }
 }
