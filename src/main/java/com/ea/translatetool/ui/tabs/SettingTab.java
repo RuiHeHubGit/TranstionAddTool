@@ -1,9 +1,14 @@
 package com.ea.translatetool.ui.tabs;
 
+import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.config.AppConfig;
+import com.ea.translatetool.config.ConfigRepository;
+import com.ea.translatetool.config.FileConfigRepositoryImpl;
+import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
 import com.ea.translatetool.ui.component.FileListTable;
 import com.ea.translatetool.util.ExcelUtil;
+import com.ea.translatetool.util.LoggerUtil;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
@@ -15,12 +20,14 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import static com.ea.translatetool.util.LoggerUtil.*;
 
-public class SettingTab extends JPanel{
+public class SettingTab extends JPanel implements ActionListener{
     private UI ui;
     private AppConfig config;
+    private JPanel confirmPanel;
     private JTextField tfLocalMapPath;
     private JTextField tfExistKeySaveDir;
     private JTextField tfLogSaveDir;
@@ -41,6 +48,18 @@ public class SettingTab extends JPanel{
 
     private void initUI() {
         setLayout(new BorderLayout());
+        confirmPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
+        JButton btnSave = new JButton("save");
+        btnSave.addActionListener(this);
+        JButton btnDefault = new JButton("default");
+        btnDefault.addActionListener(this);
+        JButton btnCancel = new JButton("cancel");
+        btnCancel.addActionListener(this);
+        confirmPanel.add(btnSave);
+        confirmPanel.add(btnDefault);
+        confirmPanel.add(btnCancel);
+        add(confirmPanel, BorderLayout.NORTH);
+
         JPanel settingPanel = new JPanel(new FlowLayout());
         settingPanel.setLayout(new BoxLayout(settingPanel, BoxLayout.PAGE_AXIS));
         add(new JScrollPane(settingPanel), BorderLayout.CENTER);
@@ -190,5 +209,98 @@ public class SettingTab extends JPanel{
         panel.add(jButton, BorderLayout.EAST);
 
         return panel;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        Object tag = e.getSource();
+        if(tag instanceof JButton) {
+            JButton btn = (JButton) tag;
+            switch (btn.getText()) {
+                case "save":
+                    saveSetting();
+                    break;
+                case "default":
+                    defaultSetting();
+                    break;
+                case "cancel":
+                    cancelChange();
+                    break;
+            }
+        }
+    }
+
+    private void saveSetting() {
+        String[] InPath = new String[]{};
+        setAppConfig(config,
+                tfLocalMapPath.getText(),
+                tfExistKeySaveDir.getText(),
+                tfLogSaveDir.getText(),
+                (String) jcobLogLevel.getSelectedItem(),
+                InPath,
+                jfOutPath.getText(),
+                jfFilePrefix.getText(),
+                jfFileSuffix.getText(),
+                jcbIsCoverKey.isSelected());
+        ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
+        Properties properties = new Properties();
+        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, GlobalConstant.CONFIG_FILE_PATH);
+        configRepository.storage(config, properties);
+    }
+
+    private void defaultSetting() {
+        int opt = JOptionPane.showConfirmDialog(this, "Are you sure you want to restore the default settings?", "prompt", JOptionPane.YES_NO_OPTION);
+        if(JOptionPane.YES_OPTION != opt) {
+            return;
+        }
+
+        File configFile = new File(GlobalConstant.CONFIG_FILE_PATH);
+        configFile.delete();
+        ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
+        Properties properties = new Properties();
+        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, GlobalConstant.CONFIG_FILE_PATH);
+        AppConfig  newConfig = configRepository.load(AppConfig.class, properties);
+        System.getProperty(LoggerUtil.LOG_LEVEL, newConfig.getLogLevel());
+        setAppConfig(config,
+                newConfig.getLocalMapFilePath(),
+                newConfig.getExistKeySaveDir(),
+                newConfig.getLogSaveDir(),
+                newConfig.getLogLevel(),
+                newConfig.getInPath(),
+                newConfig.getOutPath(),
+                newConfig.getFilePrefix(),
+                newConfig.getFileSuffix(),
+                newConfig.isCoverKey());
+
+        resetUIValue();
+    }
+
+    private void cancelChange() {
+        resetUIValue();
+        confirmPanel.setVisible(false);
+    }
+
+    private void resetUIValue() {
+        tfLocalMapPath.setText(config.getLocalMapFilePath());
+        tfExistKeySaveDir.setText(config.getExistKeySaveDir());
+        tfLogSaveDir.setText(config.getLogSaveDir());
+        jcobLogLevel.setSelectedItem(config.getLogLevel());
+        jfOutPath.setText(config.getOutPath());
+        jfFilePrefix.setText(config.getFilePrefix());
+        jfFileSuffix.setText(config.getFileSuffix());
+        jcbIsCoverKey.setSelected(config.isCoverKey());
+    }
+
+    void setAppConfig(AppConfig config, String localMapFilePath, String existKeySaveDir, String logSaveDir, String logLevel,
+                      String[] inPath, String outPath, String filePrefix, String fileSuffix, boolean isCoverKey) {
+        config.setLocalMapFilePath(localMapFilePath);
+        config.setExistKeySaveDir(existKeySaveDir);
+        config.setLogSaveDir(logSaveDir);
+        config.setLogLevel (logLevel);
+        config.setInPath (inPath);
+        config.setOutPath (outPath);
+        config.setFilePrefix (filePrefix);
+        config.setFileSuffix (fileSuffix);
+        config.setCoverKey (isCoverKey);
     }
 }
