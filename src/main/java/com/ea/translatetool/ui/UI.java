@@ -44,6 +44,7 @@ public class UI extends JFrame implements WorkCallback{
     private InputTab inputTab;
     private OutputTab outputTab;
     private SettingTab settingTab;
+    private JLabel lbInfo;
     private JLabel lbProgress;
     private JLabel lbStage;
     private JProgressBar progressBar;
@@ -99,7 +100,7 @@ public class UI extends JFrame implements WorkCallback{
             JOptionPane.showMessageDialog(this, "Please add excel file.", "prompt", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        Addit.getInstance().setSourceFiles(fileList);
+        workConfig.setExcelFiles(fileList);
 
         final File outPath = new File(outputTab.getOutPath());
         if(!outPath.exists() && !outPath.isDirectory()) {
@@ -156,6 +157,7 @@ public class UI extends JFrame implements WorkCallback{
         footPanel.setPreferredSize(new Dimension(footPanel.getSize().width, 35));
         mainContainer.add(footPanel, BorderLayout.SOUTH);
 
+        lbInfo = new JLabel("", JLabel.RIGHT);
         lbStage = new JLabel("", JLabel.RIGHT);
         lbProgress = new JLabel();
         progressBar = new JProgressBar();
@@ -177,6 +179,8 @@ public class UI extends JFrame implements WorkCallback{
         progressPanel.add(lbProgress);
         progressPanel.add(Box.createHorizontalStrut(20));
         progressPanel.add(lbStage);
+        progressPanel.add(Box.createHorizontalStrut(20));
+        progressPanel.add(lbInfo);
 
         Component glue = Box.createHorizontalGlue();
         glue.setMaximumSize(new Dimension(100, (int) btnStart.getPreferredSize().getHeight()));
@@ -206,6 +210,10 @@ public class UI extends JFrame implements WorkCallback{
         tabbedPane.add("input", inputTab);
         tabbedPane.add("output", outputTab);
         tabbedPane.add("setting", settingTab);
+
+        inputTab.init();
+        outputTab.init();
+        settingTab.init();
     }
 
     private void initWindow() {
@@ -297,8 +305,10 @@ public class UI extends JFrame implements WorkCallback{
 
     @Override
     public void onStart(WorkStage stage) {
+        btnStart.setEnabled(false);
+        btnStart.updateUI();
         if(stage.getIndex() == 1) {
-            System.out.println("doWork ..");
+            System.out.println("start ..");
         }
         String stageInfo = String.format("\n%d/%d %s doWork\n",
                 stage.getIndex(),
@@ -309,9 +319,10 @@ public class UI extends JFrame implements WorkCallback{
     }
 
     @Override
-    public void onProgress(long complete, long total) {
+    public void onProgress(long complete, long total, String info) {
         CmdMode.showProgress(complete, total, 50);
         updateProgressBar(complete, total);
+        lbInfo.setText(info);
     }
 
     @Override
@@ -322,8 +333,13 @@ public class UI extends JFrame implements WorkCallback{
                 stage.getName(),
                 stage.isSuccess()?"finished." : "failed.");
         System.out.println(stageInfo);
+        lbInfo.setText("");
         lbStage.setText(stageInfo);
-        outputTab.showFileListTable();
+        btnStart.setEnabled(true);
+        btnStart.updateUI();
+        if(stage.getType() == Addit.WORK_TRANSLATION_TO_FILE) {
+            outputTab.showFileListTable();
+        }
     }
 
     @Override

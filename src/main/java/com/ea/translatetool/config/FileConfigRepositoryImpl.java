@@ -1,11 +1,11 @@
 package com.ea.translatetool.config;
 
-import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.util.LoggerUtil;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 
@@ -26,72 +26,65 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
     }
 
     @Override
-    public synchronized  <T> T load(Class<T> tClass, Properties pro) {
-        T config = null;
-        try {
-            config = tClass.newInstance();
-            if(tClass == AppConfig.class) {
-                AppConfig appConfig = (AppConfig) config;
-                appConfig.setLocalMapFilePath(GlobalConstant.AppConfigDefaultValue.LOCAL_MAP_FILE_PATH);
-                appConfig.setCoverKey(GlobalConstant.AppConfigDefaultValue.IS_COVER_KEY);
-                appConfig.setExistKeySaveDir(GlobalConstant.AppConfigDefaultValue.EXIST_KEY_SAVE_DIR);
-                appConfig.setFilePrefix(GlobalConstant.AppConfigDefaultValue.FILE_PREFIX);
-                appConfig.setFileSuffix(GlobalConstant.AppConfigDefaultValue.FILE_SUFFIX);
-                appConfig.setInPath(GlobalConstant.AppConfigDefaultValue.IN_PATH);
-                appConfig.setOutPath(GlobalConstant.AppConfigDefaultValue.OUT_PATH);
-                appConfig.setLogSaveDir(GlobalConstant.AppConfigDefaultValue.LOG_SAVE_DIR);
-                appConfig.setLogLevel(GlobalConstant.AppConfigDefaultValue.LOG_LEVEL);
-            }
+    public synchronized  <T> T load(Class<T> tClass, Object def, Properties pro) throws IOException {
+        if(tClass == null && def == null) {
+            throw new NullPointerException();
+        }
 
-            File configFile = new File((String) pro.get(CONFIG_FILE_PATH_KEY));
-            int count = 0;
-            Field[] fields = AppConfig.class.getDeclaredFields();
-            if(configFile.exists() && configFile.isFile()) {
-                Properties properties = new Properties();
-                properties.load(new InputStreamReader(new FileInputStream(configFile)));
-                Set<Object> keySet = properties.keySet();
-                if(keySet.size() > 0) {
-                    if(Map.class.isAssignableFrom(tClass)) {
-                        Map mapConfig = (Map) config;
-                        for (Object key : keySet) {
-                            mapConfig.put(key, properties.get(key));
-                        }
-                    } else {
-                        for (Object key : keySet) {
-                            for (Field f : fields) {
-                                if (f.getName().equalsIgnoreCase(key.toString())) {
-                                    String value = (String) properties.get(key);
-                                    if (value != null && !value.isEmpty()) {
-                                        f.setAccessible(true);
-                                        try {
-                                            if (boolean.class.isAssignableFrom(f.getType())) {
-                                                f.set(config, Boolean.parseBoolean(value));
-                                            } else if (String.class.isAssignableFrom(f.getType())) {
-                                                f.set(config, value);
-                                            } else if (f.getType().isArray()) {
-                                                f.set(config, value.split(","));
-                                            }
-                                            ++count;
-                                        } catch (Exception e) {}
-                                    }
+        if(tClass != null && def != null && !tClass.isAssignableFrom(def.getClass())) {
+            throw new IllegalArgumentException(def.getClass().getName()+" can't cast to"+tClass.getName());
+        }
+
+        T config = null;
+        if(def == null) {
+            try {
+                config = tClass.newInstance();
+            } catch (Exception e) {
+                throw new IllegalArgumentException(e);
+            }
+        } else {
+            config = (T) def;
+        }
+
+        File configFile = new File((String) pro.get(CONFIG_FILE_PATH_KEY));
+        int count = 0;
+        Field[] fields = AppConfig.class.getDeclaredFields();
+        if(configFile.exists() && configFile.isFile()) {
+            Properties properties = new Properties();
+            properties.load(new InputStreamReader(new FileInputStream(configFile), "utf-8"));
+            Set<Object> keySet = properties.keySet();
+            if(keySet.size() > 0) {
+                if(Map.class.isAssignableFrom(tClass)) {
+                    Map mapConfig = (Map) config;
+                    for (Object key : keySet) {
+                        mapConfig.put(key, properties.get(key));
+                    }
+                } else {
+                    for (Object key : keySet) {
+                        for (Field f : fields) {
+                            if (f.getName().equalsIgnoreCase(key.toString())) {
+                                String value = (String) properties.get(key);
+                                if (value != null) {
+                                    f.setAccessible(true);
+                                    try {
+                                        if (boolean.class.isAssignableFrom(f.getType())) {
+                                            f.set(config, Boolean.parseBoolean(value));
+                                        } else if (String.class.isAssignableFrom(f.getType())) {
+                                            f.set(config, value);
+                                        } else if (f.getType().isArray()) {
+                                            f.set(config, value.split(","));
+                                        }
+                                        ++count;
+                                    } catch (Exception e) {}
                                 }
                             }
                         }
                     }
                 }
-                if(count < fields.length) {
-                    storage(config, pro);
-                }
-            } else {
+            }
+            if(count < fields.length) {
                 storage(config, pro);
             }
-
-        } catch (InstantiationException e) {
-            LoggerUtil.error(e.getMessage());
-        } catch (IllegalAccessException e) {
-            LoggerUtil.error(e.getMessage());
-        } catch (IOException e) {
-            LoggerUtil.error(e.getMessage());
         }
         return config;
     }
@@ -116,9 +109,9 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
             for (Object key : keySet) {
                 Object value = mapConfig.get(key);
                 String strValue = "";
-                if (value != null && value.getClass().isArray() && ((String[]) value).length > 0) {
+                if (value != null && value.getClass().isArray()) {
                     StringBuffer stringBuffer = new StringBuffer("");
-                    for (String item : (String[]) value) {
+                    for (Object item : (Object[]) value) {
                         stringBuffer.append(item).append(",");
                     }
                     strValue = stringBuffer.deleteCharAt(stringBuffer.length() - 1).toString();
@@ -134,12 +127,14 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                     f.setAccessible(true);
                     Object value = f.get(t);
                     String strValue = "";
-                    if (value != null && f.getType().isArray() && ((String[]) value).length > 0) {
+                    if (value != null && f.getType().isArray()) {
                         StringBuffer stringBuffer = new StringBuffer("");
-                        for (String item : (String[]) value) {
+                        for (Object item : (Object[]) value) {
                             stringBuffer.append(item).append(",");
                         }
-                        strValue = stringBuffer.deleteCharAt(stringBuffer.length() - 1).toString();
+                        if(stringBuffer.length() > 0) {
+                            strValue = stringBuffer.deleteCharAt(stringBuffer.length() - 1).toString();
+                        }
                     } else if(value != null){
                         strValue = value.toString();
                     }
@@ -149,9 +144,9 @@ public class FileConfigRepositoryImpl implements ConfigRepository {
                 }
             }
         }
-        FileWriter writer = null;
+        OutputStreamWriter writer = null;
         try {
-            writer = new FileWriter(saveFile);
+            writer = new OutputStreamWriter(new FileOutputStream(saveFile), "utf-8");
             properties.store(writer, "config of tool");
         } catch (IOException e) {
             LoggerUtil.error(e.getMessage());

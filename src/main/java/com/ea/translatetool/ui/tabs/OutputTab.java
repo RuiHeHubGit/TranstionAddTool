@@ -15,6 +15,7 @@ import java.io.File;
 import java.nio.file.DirectoryStream;
 
 public class OutputTab extends JPanel implements ActionListener, ItemListener {
+    private UI ui;
     private WorkConfig workConfig;
     private JTextField tfOutPath;
     private JTable fileListTable;
@@ -23,7 +24,11 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
     private Object[][] tableData;
 
     public OutputTab(UI parent) {
-        workConfig = parent.getWorkConfig();
+        ui = parent;
+    }
+
+    public void init() {
+        workConfig = ui.getWorkConfig();
         setLayout(new SpringLayout());
         initTopPanel();
         initFileListTable();
@@ -132,7 +137,7 @@ public class OutputTab extends JPanel implements ActionListener, ItemListener {
                 }
                 return entry.getName().toLowerCase().endsWith(suffix);
             }
-        });
+        }, null);
 
         tableData = new Object[fileList.size()][3];
         for (int i=0; i<fileList.size(); ++i) {

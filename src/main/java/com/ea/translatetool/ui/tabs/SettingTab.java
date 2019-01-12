@@ -1,34 +1,36 @@
 package com.ea.translatetool.ui.tabs;
 
-import com.ea.translatetool.addit.Addit;
+import com.ea.translatetool.App;
+import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.config.AppConfig;
 import com.ea.translatetool.config.ConfigRepository;
 import com.ea.translatetool.config.FileConfigRepositoryImpl;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
 import com.ea.translatetool.ui.component.FileListTable;
-import com.ea.translatetool.util.ExcelUtil;
 import com.ea.translatetool.util.LoggerUtil;
 
 import javax.swing.*;
 import javax.swing.border.BevelBorder;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.swing.filechooser.FileFilter;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.io.File;
-import java.util.ArrayList;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.*;
 import java.util.List;
-import java.util.Properties;
 
 import static com.ea.translatetool.util.LoggerUtil.*;
 
-public class SettingTab extends JPanel implements ActionListener{
+public class SettingTab extends JPanel implements ActionListener,ItemListener{
     private UI ui;
     private AppConfig config;
-    private JPanel confirmPanel;
     private JTextField tfLocalMapPath;
     private JTextField tfExistKeySaveDir;
     private JTextField tfLogSaveDir;
@@ -39,22 +41,29 @@ public class SettingTab extends JPanel implements ActionListener{
     private JTextField jfFileSuffix;
     private JCheckBox jcbIsCoverKey;
     private List<String> inPaths;
-
+    private JButton btnSave;
+    private JButton btnDefault;
+    private JButton btnCancel;
+    private JDialog localeMapDlg;
+    private JTable jtLocaleMap;
 
     public SettingTab(UI ui) {
         this.ui = ui;
+    }
+
+    public void init() {
         config = ui.getAppConfig();
         initUI();
     }
 
     private void initUI() {
         setLayout(new BorderLayout());
-        confirmPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
-        JButton btnSave = new JButton("save");
+        JPanel confirmPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
+        btnSave = new JButton("save");
         btnSave.addActionListener(this);
-        JButton btnDefault = new JButton("default");
+        btnDefault = new JButton("default");
         btnDefault.addActionListener(this);
-        JButton btnCancel = new JButton("cancel");
+        btnCancel = new JButton("cancel");
         btnCancel.addActionListener(this);
         confirmPanel.add(btnSave);
         confirmPanel.add(btnDefault);
@@ -69,11 +78,15 @@ public class SettingTab extends JPanel implements ActionListener{
         tfExistKeySaveDir = new JTextField(config.getExistKeySaveDir());
         tfLogSaveDir = new JTextField(config.getLogSaveDir());
         jcobLogLevel = new JComboBox<>(new String[]{LEVEL_FINE, LEVEL_INFO, LEVEL_WARNING, LEVEL_ERROR});
+        jcobLogLevel.setSelectedItem(config.getLogLevel());
         jtInPath = new FileListTable();
         jfOutPath = new JTextField(config.getOutPath());
         jfFilePrefix = new JTextField(config.getFilePrefix());
         jfFileSuffix = new JTextField(config.getFileSuffix());
         jcbIsCoverKey = new JCheckBox("Cover Exist Key ", null, config.isCoverKey());
+
+        jcbIsCoverKey.addItemListener(this);
+        jcobLogLevel.addItemListener(this);
 
         settingPanel.add(createSingleJFileChooserPanel("Local Map Path", tfLocalMapPath, "select", JFileChooser.FILES_ONLY));
         settingPanel.add(createSingleJFileChooserPanel("Exist Key Save Dir", tfExistKeySaveDir, "select", JFileChooser.DIRECTORIES_ONLY));
@@ -87,6 +100,7 @@ public class SettingTab extends JPanel implements ActionListener{
         fixPanel.add(createEditPanel("File Suffix:", jfFileSuffix));
         settingPanel.add(fixPanel);
 
+        settingPanel.add(Box.createVerticalStrut(15));
         JPanel boxPanel = new JPanel();
         boxPanel.setLayout(new BoxLayout(boxPanel, BoxLayout.LINE_AXIS));
         boxPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -96,7 +110,16 @@ public class SettingTab extends JPanel implements ActionListener{
         boxPanel.add(jcobLogLevel);
         boxPanel.add(Box.createHorizontalStrut(30));
         boxPanel.add(jcbIsCoverKey);
+        boxPanel.add(Box.createHorizontalStrut(30));
+        JButton btnLocaleMap = new JButton("locale map");
+        boxPanel.add(btnLocaleMap);
         settingPanel.add(boxPanel);
+        btnLocaleMap.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showLocaleMapDialog();
+            }
+        });
 
         settingPanel.add(Box.createVerticalStrut(20));
         settingPanel.add(createInPathPanel());
@@ -108,41 +131,62 @@ public class SettingTab extends JPanel implements ActionListener{
             }
         }
         updateInPathListTable();
+        enableConfirmButtons(false, true);
     }
 
     private Component createInPathPanel() {
-        final JButton btnRemove = new JButton("remove");
+        JButton btnRemove = new JButton("remove");
         JButton btnClear = new JButton("clear");
         JButton btnAddInPath = new JButton("add");
         final JCheckBox jcbAll = new JCheckBox("all", true);
         btnRemove.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                boolean isChange = false;
                 DefaultTableModel tableModel = (DefaultTableModel) jtInPath.getModel();
                 for (int i=0; i<tableModel.getRowCount(); ++i) {
                     if((Boolean) tableModel.getValueAt(i, 1)) {
                         tableModel.removeRow(i);
                         --i;
+                        isChange = true;
                     }
                 }
-                jtInPath.updateUI();
+                if(isChange) {
+                    jtInPath.updateUI();
+                    enableConfirmButtons(true, true);
+                }
             }
         });
         btnClear.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                boolean isChange = jtInPath.getRowCount() > 0;
                 ((DefaultTableModel)jtInPath.getModel()).setRowCount(0);
-                jtInPath.updateUI();
+                if(isChange) {
+                    jtInPath.updateUI();
+                    enableConfirmButtons(true, true);
+                }
             }
         });
         jcbAll.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                boolean checked = null != jcbAll.getSelectedObjects();
+                boolean checked = ((JCheckBox)e.getSource()).isSelected();
                 for (int i=0; i<jtInPath.getRowCount(); ++i) {
                     jtInPath.setValueAt(checked, i, 1);
                 }
                 jtInPath.updateUI();
+            }
+        });
+        jtInPath.getModel().addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                DefaultTableModel tableModel = (DefaultTableModel) e.getSource();
+                if(e.getColumn() == 1) {
+                    if(!((Boolean) tableModel.getValueAt(e.getFirstRow(), e.getColumn()))) {
+                        jcbAll.setSelected(false);
+                    }
+                }
             }
         });
         btnAddInPath.addActionListener(new ActionListener() {
@@ -175,25 +219,14 @@ public class SettingTab extends JPanel implements ActionListener{
         return InPathPanel;
     }
 
+    private void enableConfirmButtons(boolean show, boolean showDefBtn) {
+        btnSave.setEnabled(show);
+        btnDefault.setEnabled(showDefBtn);
+        btnCancel.setEnabled(show);
+    }
+
     private void addInPath() {
-        FileFilter fileFilter = new FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                if(f.isDirectory() || (f.isFile()
-                        && !f.getName().startsWith("~$")
-                        && (f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
-                        || f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX)))) {
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public String getDescription() {
-                return "directory;*"+ExcelUtil.SUFFIX_XLS+";*"+ExcelUtil.SUFFIX_XLSX;
-            }
-        };
-
+        FileFilter fileFilter = AdditAssist.createExcelFileFilter();
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
         fileChooser.setMultiSelectionEnabled(true);
@@ -217,6 +250,7 @@ public class SettingTab extends JPanel implements ActionListener{
             }
 
             if(needUpdate) {
+                enableConfirmButtons(true, true);
                 updateInPathListTable();
             }
         }
@@ -258,6 +292,7 @@ public class SettingTab extends JPanel implements ActionListener{
                 if(JFileChooser.APPROVE_OPTION == fileChooser.showDialog(panel, btnName)) {
                     File file = fileChooser.getSelectedFile();
                     jf.setText(file.getAbsolutePath());
+                    enableConfirmButtons(true, true);
                 }
             }
         });
@@ -269,33 +304,17 @@ public class SettingTab extends JPanel implements ActionListener{
         return panel;
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        Object tag = e.getSource();
-        if(tag instanceof JButton) {
-            JButton btn = (JButton) tag;
-            switch (btn.getText()) {
-                case "save":
-                    saveSetting();
-                    break;
-                case "default":
-                    defaultSetting();
-                    break;
-                case "cancel":
-                    cancelChange();
-                    break;
-            }
-        }
-    }
-
     private void saveSetting() {
-        String[] InPath = new String[]{};
+        String[] inPath = new String[jtInPath.getRowCount()];
+        for (int i=0; i<jtInPath.getRowCount(); ++i) {
+            inPath[i] = (String) jtInPath.getValueAt(i, 0);
+        }
         setAppConfig(config,
                 tfLocalMapPath.getText(),
                 tfExistKeySaveDir.getText(),
                 tfLogSaveDir.getText(),
                 (String) jcobLogLevel.getSelectedItem(),
-                InPath,
+                inPath,
                 jfOutPath.getText(),
                 jfFilePrefix.getText(),
                 jfFileSuffix.getText(),
@@ -312,13 +331,9 @@ public class SettingTab extends JPanel implements ActionListener{
             return;
         }
 
-        File configFile = new File(GlobalConstant.CONFIG_FILE_PATH);
-        configFile.delete();
-        ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
-        Properties properties = new Properties();
-        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, GlobalConstant.CONFIG_FILE_PATH);
-        AppConfig  newConfig = configRepository.load(AppConfig.class, properties);
-        System.getProperty(LoggerUtil.LOG_LEVEL, newConfig.getLogLevel());
+        enableConfirmButtons(false, false);
+        AppConfig  newConfig = App.createDefAppConfig();
+        newConfig.setLogLevel(LoggerUtil.setLogLevel(newConfig.getLogLevel()));
         setAppConfig(config,
                 newConfig.getLocalMapFilePath(),
                 newConfig.getExistKeySaveDir(),
@@ -329,13 +344,19 @@ public class SettingTab extends JPanel implements ActionListener{
                 newConfig.getFilePrefix(),
                 newConfig.getFileSuffix(),
                 newConfig.isCoverKey());
-
+        inPaths.clear();
+        for (String path : newConfig.getInPath()) {
+            if(!inPaths.contains(path)) {
+                inPaths.add(path);
+            }
+        }
         resetUIValue();
+        saveSetting();
     }
 
     private void cancelChange() {
         resetUIValue();
-        confirmPanel.setVisible(false);
+        enableConfirmButtons(false, true);
     }
 
     private void resetUIValue() {
@@ -347,6 +368,7 @@ public class SettingTab extends JPanel implements ActionListener{
         jfFilePrefix.setText(config.getFilePrefix());
         jfFileSuffix.setText(config.getFileSuffix());
         jcbIsCoverKey.setSelected(config.isCoverKey());
+        updateInPathListTable();
     }
 
     void setAppConfig(AppConfig config, String localMapFilePath, String existKeySaveDir, String logSaveDir, String logLevel,
@@ -360,5 +382,209 @@ public class SettingTab extends JPanel implements ActionListener{
         config.setFilePrefix (filePrefix);
         config.setFileSuffix (fileSuffix);
         config.setCoverKey (isCoverKey);
+    }
+
+    private void showLocaleMapDialog() {
+        if(localeMapDlg == null) {
+            localeMapDlg = new JDialog(ui, false);
+            initLocaleMapDlg();
+        }
+        showLocaleMap();
+        localeMapDlg.setVisible(true);
+    }
+
+    private void showLocaleMap() {
+        DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+        HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+        Set<String> keys = localMap.keySet();
+        tableModel.setRowCount(keys.size());
+        tableModel.setColumnCount(2);
+        int index = 0;
+        for (String key : keys) {
+            tableModel.setValueAt(key, index, 0);
+            tableModel.setValueAt(localMap.get(key), index, 1);
+            ++index;
+        }
+    }
+
+    private void initLocaleMapDlg() {
+        localeMapDlg.setSize(500, 600);
+        localeMapDlg.setLocationRelativeTo(null);
+        localeMapDlg.setLayout(new BorderLayout(5, 5));
+        jtLocaleMap = new JTable() {
+            DefaultTableCellRenderer tcr = new DefaultTableCellRenderer(){
+                private static final long serialVersionUID = 1L;
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column){
+                    if(row%2 == 0)
+                        setBackground(Color.WHITE);//设置奇数行底色
+                    else if(row%2 == 1)
+                        setBackground(new Color(220,230,241));//设置偶数行底色
+                    return super.getTableCellRendererComponent(table, value,isSelected, hasFocus, row, column);
+                }
+            };
+
+            @Override
+            public TableCellRenderer getCellRenderer(int row, int column) {
+                return tcr;
+            }
+        };
+        DefaultTableModel defaultTableModel = new DefaultTableModel(new Object[][]{}, new Object[]{"Locale Name", "Locale Value"});
+        jtLocaleMap.setRowHeight(20);
+        jtLocaleMap.setModel(defaultTableModel);
+        localeMapDlg.add(new JScrollPane(jtLocaleMap), BorderLayout.CENTER);
+
+        final JButton btnDef = new JButton("Default");
+        final JButton btnSave = new JButton("Save");
+        btnSave.setEnabled(false);
+        final JButton btnCancel = new JButton("Cancel");
+        btnCancel.setEnabled(false);
+        final JButton btnRemove = new JButton("Remove");
+        btnRemove.setEnabled(false);
+        final JButton btnAdd = new JButton("Add New");
+        JPanel opTablePanel = new JPanel();
+        opTablePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 10));
+        opTablePanel.setLayout(new BoxLayout(opTablePanel, BoxLayout.LINE_AXIS));
+        opTablePanel.add(Box.createHorizontalGlue());
+        opTablePanel.add(btnSave);
+        opTablePanel.add(Box.createHorizontalStrut(15));
+        opTablePanel.add(btnCancel);
+        opTablePanel.add(Box.createHorizontalStrut(15));
+        opTablePanel.add(btnRemove);
+        opTablePanel.add(Box.createHorizontalStrut(15));
+        opTablePanel.add(btnAdd);
+        opTablePanel.add(Box.createHorizontalStrut(15));
+        opTablePanel.add(btnDef);
+        opTablePanel.add(Box.createHorizontalStrut(15));
+
+        btnDef.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int opt = JOptionPane.showConfirmDialog(localeMapDlg, "Are you sure you want to restore the default locale map?", "prompt", JOptionPane.YES_NO_OPTION);
+                if(JOptionPane.YES_OPTION != opt) {
+                    return;
+                }
+                btnDef.setEnabled(false);
+                try {
+                    HashMap<String, String> newLocaleMap = AdditAssist.loadLocalMap(config.getLocalMapFilePath(), true);
+                    HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+                    localMap.clear();
+                    localMap.putAll(newLocaleMap);
+                    showLocaleMap();
+                } catch (IOException e1) {
+                    btnDef.setEnabled(true);
+                    LoggerUtil.error(e1.getMessage());
+                    JOptionPane.showMessageDialog(localeMapDlg, "set to default failed.", "error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        btnSave.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                btnSave.setEnabled(false);
+                btnCancel.setEnabled(false);
+                DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+                HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+                localMap.clear();
+                for (int i=0; i<tableModel.getRowCount(); ++i) {
+                    String keyName = tableModel.getValueAt(i, 0).toString();
+                    String keyValue = tableModel.getValueAt(i, 1).toString();
+                    if(keyName.trim().isEmpty() || keyValue.trim().isEmpty()) {
+                        tableModel.removeRow(i);
+                        --i;
+                        continue;
+                    }
+                    localMap.put(keyName, keyValue);
+                }
+                saveLocaleMap(localMap);
+            }
+        });
+        btnCancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                btnSave.setEnabled(false);
+                btnCancel.setEnabled(false);
+                showLocaleMap();
+            }
+        });
+        btnRemove.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                btnRemove.setEnabled(false);
+                int[] rows = jtLocaleMap.getSelectedRows();
+                DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+                int rCount = 0;
+                for (int rowIndex : rows) {
+                    tableModel.removeRow(rowIndex-rCount);
+                    ++rCount;
+                }
+                jtLocaleMap.updateUI();
+                if(rCount > 0) {
+                    btnSave.setEnabled(true);
+                    btnCancel.setEnabled(true);
+                    btnDef.setEnabled(true);
+                }
+            }
+        });
+
+        btnAdd.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+                int rowCount = jtLocaleMap.getRowCount();
+                tableModel.insertRow(rowCount, new String[]{"", ""});
+                jtLocaleMap.getSelectionModel().setSelectionInterval(rowCount , rowCount);
+                Rectangle rect = jtLocaleMap.getCellRect(rowCount ,  0 ,  true );
+                jtLocaleMap.scrollRectToVisible(rect);
+                jtLocaleMap.editCellAt(rowCount, 0);
+                jtLocaleMap.getEditorComponent().requestFocus();
+                btnSave.setEnabled(true);
+                btnCancel.setEnabled(true);
+                btnRemove.setEnabled(true);
+                btnDef.setEnabled(true);
+            }
+        });
+        localeMapDlg.add(opTablePanel, BorderLayout.NORTH);
+
+        jtLocaleMap.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                super.mouseReleased(e);
+                btnRemove.setEnabled(jtLocaleMap.getSelectedRows().length > 0);
+            }
+        });
+    }
+
+    private void saveLocaleMap(HashMap<String, String> localMap) {
+        ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
+        Properties properties = new Properties();
+        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, config.getLocalMapFilePath());
+        configRepository.storage(localMap, properties);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        Object tag = e.getSource();
+        if(tag instanceof JButton) {
+            JButton btn = (JButton) tag;
+            switch (btn.getText()) {
+                case "save":
+                    enableConfirmButtons(false, true);
+                    saveSetting();
+                    break;
+                case "default":
+                    defaultSetting();
+                    break;
+                case "cancel":
+                    enableConfirmButtons(false, true);
+                    cancelChange();
+                    break;
+            }
+        }
+    }
+
+    @Override
+    public void itemStateChanged(ItemEvent e) {
+        enableConfirmButtons(true, true);
     }
 }

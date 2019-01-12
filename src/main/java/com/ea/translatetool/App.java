@@ -10,6 +10,7 @@ import com.ea.translatetool.util.LoggerUtil;
 import com.ea.translatetool.util.PID;
 import com.ea.translatetool.util.WindowTool;
 
+import java.io.IOException;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -57,7 +58,25 @@ public class App {
         ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
         Properties properties = new Properties();
         properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, GlobalConstant.CONFIG_FILE_PATH);
-        appConfig = configRepository.load(AppConfig.class, properties);
-        System.getProperty(LoggerUtil.LOG_LEVEL, appConfig.getLogLevel());
+        try {
+            appConfig = configRepository.load(AppConfig.class, createDefAppConfig(), properties);
+        } catch (IOException e) {
+            LoggerUtil.error(e.getMessage());
+        }
+        appConfig.setLogLevel(LoggerUtil.setLogLevel(appConfig.getLogLevel()));
+    }
+
+    public static AppConfig createDefAppConfig() {
+        AppConfig appConfig = new AppConfig();
+        appConfig.setLocalMapFilePath(GlobalConstant.AppConfigDefaultValue.LOCAL_MAP_FILE_PATH);
+        appConfig.setCoverKey(GlobalConstant.AppConfigDefaultValue.IS_COVER_KEY);
+        appConfig.setExistKeySaveDir(GlobalConstant.AppConfigDefaultValue.EXIST_KEY_SAVE_DIR);
+        appConfig.setFilePrefix(GlobalConstant.AppConfigDefaultValue.FILE_PREFIX);
+        appConfig.setFileSuffix(GlobalConstant.AppConfigDefaultValue.FILE_SUFFIX);
+        appConfig.setInPath(GlobalConstant.AppConfigDefaultValue.IN_PATH);
+        appConfig.setOutPath(GlobalConstant.AppConfigDefaultValue.OUT_PATH);
+        appConfig.setLogSaveDir(GlobalConstant.AppConfigDefaultValue.LOG_SAVE_DIR);
+        appConfig.setLogLevel(GlobalConstant.AppConfigDefaultValue.LOG_LEVEL);
+        return appConfig;
     }
 }

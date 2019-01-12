@@ -21,24 +21,19 @@ import java.util.regex.Pattern;
 
 public class Addit {
     public final static int WORK_SCAN_FILE = 0;
-    public final static int WORK_LOAD_TRANSLATION = 1;
-    public final static int WORK_TRANSLATION_TO_FILE = 2;
+    public final static int WORK_CALC_LOCATOR = 1;
+    public final static int WORK_LOAD_TRANSLATION = 2;
+    public final static int WORK_TRANSLATION_TO_FILE = 3;
 
     private volatile static boolean running;
     private static Addit  addit;
-    private WorkConfig workConfig;
-    private List<Translation> translationList;
-    private List<File> sourceFiles;
     private int stage;
     private int stageCount;
     private WorkStage workStage;
 
-    private Addit() {
-        translationList = new ArrayList<>();
-        sourceFiles = new ArrayList<>();
-    }
+    private Addit() {}
 
-    public synchronized static Addit getInstance() {
+    private synchronized static Addit getInstance() {
         if(addit == null) {
             addit = new Addit();
         }
@@ -48,15 +43,18 @@ public class Addit {
     public static Object doWork(WorkConfig workConfig, int startWork, int endWork, WorkCallback callback) {
         Object result = null;
         Addit addit = getInstance();
-        addit.mergeNewAddTranslate(workConfig);
         try {
             running = true;
+            addit.stage = 0;
             addit.stageCount = endWork-startWork+1;
             for (; startWork <= endWork; ++startWork) {
-                addit.stage = 1;
+                addit.stage++;
                 switch (startWork) {
                     case WORK_SCAN_FILE:
                         result = addit.scanTranslateFiles(workConfig, callback);
+                        break;
+                    case WORK_CALC_LOCATOR:
+                        addit.calcLocator(workConfig, callback);
                         break;
                     case WORK_LOAD_TRANSLATION:
                         addit.loadAllTranslate(workConfig, callback);
@@ -78,9 +76,42 @@ public class Addit {
         return result;
     }
 
-    private void translationToFile(WorkConfig workConfig, WorkCallback callback) throws IOException {
+    private void calcLocator(WorkConfig workConfig, WorkCallback callback) {
+        workStage = new WorkStage(stage, stageCount, WORK_CALC_LOCATOR, "calc locator", "", new Date(), null, true);
+        List<File> excelFiles = workConfig.getExcelFiles();
+        if(excelFiles.size() > 0) {
+            if(callback != null) {
+                callback.onProgress(0, excelFiles.size(), "");
+            }
+        }
 
-        workStage = new WorkStage(stage, stageCount, 3, "add translate to file", "", new Date(), null, true);
+        int index = 0;
+        TreeMap<String, TranslationLocator> translationLocatorMap = workConfig.getTranslationLocatorMap();
+        for (File file : excelFiles) {
+            if(translationLocatorMap.containsKey(file.getAbsolutePath())) {
+                continue;
+            }
+            try {
+                TranslationLocator translationLocator = AdditAssist.calcTranslationLocator(
+                        ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0), workConfig.getLocalMap(), null);
+                if(translationLocator != null) {
+                    translationLocatorMap.put(file.getAbsolutePath(), translationLocator);
+                }
+                if(callback != null) {
+                    callback.onProgress(++index, excelFiles.size(), file.getName());
+                }
+            } catch (Throwable t) {
+                LoggerUtil.error(t.getMessage());
+                if(callback != null) {
+                    callback.onError(t);
+                }
+            }
+        }
+        onDone(callback, workStage);
+    }
+
+    private void translationToFile(WorkConfig workConfig, WorkCallback callback) throws IOException {
+        workStage = new WorkStage(stage, stageCount, WORK_TRANSLATION_TO_FILE, "add translate to file", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
@@ -121,12 +152,12 @@ public class Addit {
             }
             localAllTranslations.add(translation);
             if(callback != null) {
-                callback.onProgress(++index, total);
+                callback.onProgress(++index, total, "");
             }
         }
 
         if(callback != null) {
-            callback.onProgress(total, total);
+            callback.onProgress(total, total, "");
         }
         workConfig.getTranslationList().clear();
         onDone(callback, workStage);
@@ -134,14 +165,13 @@ public class Addit {
 
     private List<Translation> saveTranslateToFile(List<Translation> localAllTranslations, File localFile, GlobalConstant.OutType outType, boolean cover) throws IOException {
         List<Translation> notSaveTranslationList = null;
-        if(!cover) {
-            notSaveTranslationList = new ArrayList<>();
-        }
 
         if(!localFile.exists()) {
             if(!localFile.getParentFile().exists())
-                localFile.getParentFile().mkdirs();
-            localFile.createNewFile();
+                if(!localFile.getParentFile().mkdirs()) throw new IOException("create dir failed, dir:"+localFile.getParentFile());
+            if(!localFile.createNewFile()) {
+                LoggerUtil.error("create file failed, file:"+localFile);
+            }
         }
 
         List<String> lines = IOUtil.readText(localFile, null);
@@ -152,6 +182,9 @@ public class Addit {
 
         for (Translation translation : localAllTranslations) {
             if(!insertStringToListOnLastSameIndex(lines, translateToLineString(translation, outType, lines), getDivisionCharByType(outType), cover)) {
+                if(notSaveTranslationList == null) {
+                    notSaveTranslationList = new ArrayList<>();
+                }
                 notSaveTranslationList.add(translation);
             }
         }
@@ -227,55 +260,55 @@ public class Addit {
 
     private File getLocalFile(WorkConfig workConfig, String local) {
         return new File(workConfig.getOutput(),
-                workConfig.getFileNamePrefix()+local+workConfig.getFileNameSuffix()+workConfig.getOutType().getValue());
+                workConfig.getFilePrefix()+local+workConfig.getFileSuffix()+workConfig.getOutType().getValue());
     }
 
-    private void mergeNewAddTranslate(WorkConfig workConfig) {
-        this.workConfig = workConfig;
-        translationList = new ArrayList<>();
-        List<Translation> list =  workConfig.getTranslationList();
-        if(list != null && !list.isEmpty())
-            translationList.addAll(list);
-    }
-
-    private List<File> scanTranslateFiles(WorkConfig workConfig, WorkCallback callback) throws NotFoundExcelException {
-        List<File> inputPathList = workConfig.getInput();
+    private List<File> scanTranslateFiles(WorkConfig workConfig, final WorkCallback callback) throws NotFoundExcelException {
+        final List<File> inputPathList = workConfig.getInput();
         List<File> newList = new ArrayList<>();
-        workStage =  new WorkStage(stage, stageCount, 3, "scan files", "", new Date(), null, true);
+        workStage =  new WorkStage(stage, stageCount, WORK_SCAN_FILE, "scan files", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
 
         int i = 0;
+        if(callback != null) {
+            callback.onProgress(0, inputPathList.size(), "");
+        }
         for (final File file : inputPathList) {
+            final int index = i;
             List<File> files =  IOUtil.fileList(file, true, new DirectoryStream.Filter<File>() {
                 @Override
                 public boolean accept(File entry) {
-                    if(entry.isFile()
+                    return entry.isFile()
                             && !entry.getName().startsWith("~$")
                             && (entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
-                                    || entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX))) {
-                        return true;
+                            || entry.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX));
+                }
+            }, new IOUtil.ScanCallBack() {
+                @Override
+                public void onNewDir(File dir) {
+                    if(callback != null) {
+                        callback.onProgress(index, inputPathList.size(), "child dir:"+dir.getName());
                     }
-                    return false;
                 }
             });
             newList.addAll(files);
             if(callback != null) {
-                callback.onProgress(++i, inputPathList.size());
+                callback.onProgress(++i, inputPathList.size(), file.getName());
             }
         }
 
         List<File> resultList = new ArrayList<>();
+        List<File> excelFiles = workConfig.getExcelFiles();
         for (File file : newList) {
-            if(!sourceFiles.contains(file)) {
+            if(!excelFiles.contains(file)) {
+                excelFiles.add(file);
                 resultList.add(file);
             }
         }
-
-        sourceFiles.addAll(resultList);
         if(callback != null) {
-            callback.onProgress(i, inputPathList.size());
+            callback.onProgress(i, inputPathList.size(), "");
         }
         onDone(callback, workStage);
 
@@ -283,16 +316,18 @@ public class Addit {
     }
 
     private void loadAllTranslate(WorkConfig workConfig, WorkCallback callback) throws IOException, InvalidExcelContentException, NotFoundExcelException {
-        if(sourceFiles.isEmpty()) {
+        List<File> excelFiles = workConfig.getExcelFiles();
+        if(excelFiles.isEmpty()) {
             throw new NotFoundExcelException("not excel file");
         }
-        workStage = new WorkStage(stage, stageCount, 3, "load translate", "", new Date(), null, true);
+        workStage = new WorkStage(stage, stageCount, WORK_LOAD_TRANSLATION, "load translate", "", new Date(), null, true);
         if(callback != null) {
             callback.onStart(workStage);
         }
-        for (int i=0; i<sourceFiles.size(); ++i) {
+        int index = 0;
+        for (File excelFile : excelFiles) {
             try {
-                parseTranslateFile(workConfig, sourceFiles.get(i));
+                loadTranslateFromFile(workConfig, excelFile);
             } catch (Exception e) {
                 if(null != callback && callback.onError(e)) {
                     throw e;
@@ -300,33 +335,31 @@ public class Addit {
             }
 
             if(callback != null) {
-                callback.onProgress(i, sourceFiles.size());
+                callback.onProgress(++index, excelFiles.size(), excelFile.getName());
             }
         }
 
         if(callback != null) {
-            callback.onProgress(sourceFiles.size(), sourceFiles.size());
+            callback.onProgress(excelFiles.size(), excelFiles.size(), "");
         }
         workStage.setSuccess(true);
         onDone(callback, workStage);
     }
 
-    private void parseTranslateFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
-        HashMap<String, TranslationLocator> translationLocatorMap = workConfig.getTranslationLocatorMap();
+    private void loadTranslateFromFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
+        TranslationLocator translationLocator = workConfig.getTranslationLocatorMap().get(file.getAbsolutePath());
         HashMap<String, String> localMap = workConfig.getLocalMap();
-        TranslationLocator translationLocator = translationLocatorMap.get(file.getAbsolutePath());
-        List<List<String>> excelContent = ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0);
-        List<Translation> translationList = workConfig.getTranslationList();
-
-        if(excelContent.size() > 0) {
+        if(translationLocator == null) {
+            translationLocator = AdditAssist.calcTranslationLocator(ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0),
+                    localMap, null);
             if(translationLocator == null) {
-                translationLocator = AdditAssist.calcTranslationLocator(excelContent, localMap, translationLocatorMap.get(file.getAbsolutePath()));
-                if(translationLocator == null) {
-                    throw new InvalidExcelContentException("parse failed:"+file.getAbsolutePath());
-                }
-                translationLocatorMap.put(file.getAbsolutePath(), translationLocator);
+                throw new InvalidExcelContentException("parse failed:" + file.getAbsolutePath());
             }
+        }
 
+        List<Translation> translationList = workConfig.getTranslationList();
+        List<List<String>> excelContent = ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0);
+        if(excelContent.size() > 0) {
             List<String> keys = AdditAssist.getTranslationKeys(excelContent, translationLocator.getKeyLocator());
 
             if (translationLocator.getKeyLocator().startsWith("c")
@@ -345,8 +378,8 @@ public class Addit {
                 int columns = excelContent.get(0).size();
                 List<String> columnTexts = new ArrayList<>();
                 for (int i = 0; i<columns; ++i) {
-                    for (int j=0; j < excelContent.size(); ++j) {
-                        columnTexts.add(excelContent.get(j).get(i));
+                    for (List<String > row : excelContent) {
+                        columnTexts.add(row.get(i));
                     }
                     List<Translation> translations = AdditAssist.getTranslationList(keys.get(i),
                             columnTexts.get(translationLocator.getLocalLocator()),
@@ -376,22 +409,6 @@ public class Addit {
         }
     }
 
-    public static boolean isRunning() {
-        return running;
-    }
-
-    public List<File> getSourceFiles() {
-        return sourceFiles;
-    }
-
-    public List<Translation> getTranslationList() {
-        return translationList;
-    }
-
-    public WorkConfig getWorkConfig() {
-        return workConfig;
-    }
-
     private void onDone(WorkCallback callback, WorkStage workStage) {
         if(callback != null) {
             workStage.setEnd(new Date());
@@ -402,11 +419,7 @@ public class Addit {
         }
     }
 
-    public boolean setSourceFiles(List<File> sourceFiles) {
-        if(running) {
-            return false;
-        }
-        this.sourceFiles = sourceFiles;
-        return true;
+    public static boolean isRunning() {
+        return running;
     }
 }

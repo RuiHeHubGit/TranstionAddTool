@@ -74,7 +74,7 @@ public class CmdMode {
             }
 
             @Override
-            public void onProgress(long complete, long total) {
+            public void onProgress(long complete, long total, String info) {
                 showProgress(complete, total, 50);
             }
 
@@ -150,7 +150,9 @@ public class CmdMode {
                 .hasArg().argName("json or properties").desc("Default value is json").build();
 
         Option optColumns = Option.builder("l").longOpt("locator")
-                .hasArgs().argName("rnumber|cnumber,number1,number2,v|h").valueSeparator(',').desc("r or c,local,translation,vertical or horizontal").build();
+                .hasArgs().argName("rnumber|cnumber,number1,number2,v|h").valueSeparator(',').desc("set excel local,key and translation position,\" +\n" +
+                        "                \"path is excel file path and exist,num1 is row or column of key,num2 is of locale,num3 is of translation,\" +\n" +
+                        "                \"mean of v is vertical locale and translation,mean of h is horizontal locale and translation,example: l c0,1,2,v").build();
 
         opts.addOption(optHelp);
         opts.addOption(optVersion);
@@ -219,7 +221,7 @@ public class CmdMode {
             config.setOutput(file);
         }
 
-        if (line.hasOption("l")) {
+        if (line.hasOption("")) {
             String[] columns = line.getOptionValues("l");
             boolean pass = false;
             if (columns.length == 4) {
@@ -286,7 +288,7 @@ public class CmdMode {
                     case "help":
                         printInputModeHelp();
                         break;
-                    case "doWork":
+                    case "start":
                         doStart(config);
                         break;
                     case "dll":
@@ -295,9 +297,6 @@ public class CmdMode {
                     case "clear":
                         notEndCmdLines.clear();
                         new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-                        break;
-                    case "list":
-                        printKeyList();
                         break;
                     case "exit":
                         System.out.println("bye.");
@@ -318,15 +317,6 @@ public class CmdMode {
                     LoggerUtil.error(e1.getMessage());
                 }
             }
-        }
-    }
-
-    private void printKeyList() {
-        if(translations.size() == 0) {
-            System.out.println("not translations");
-        }
-        for (Translation t : translations) {
-            System.out.println(t);
         }
     }
 
@@ -354,21 +344,15 @@ public class CmdMode {
                 }
                 if(lines.size() > 0) {
                     for (String cmd : lines) {
-                        if(cmd.startsWith("add")) {
-
-                        } else if(cmd.startsWith("del")) {
-
-                        } else {
-                            String[] args = ("-"+cmd).split("\\s");
-                            try {
-                                parseOptions(args, config, 2);
-                            } catch (Exception e) {
-                                String message = e.getMessage();
-                                if(message == null) {
-                                    message = "unsupported command: "+cmd;
-                                }
-                                System.err.println("Error:"+message);
+                        String[] args = ("-"+cmd).split("\\s");
+                        try {
+                            parseOptions(args, config, 2);
+                        } catch (Exception e) {
+                            String message = e.getMessage();
+                            if(message == null) {
+                                message = "unsupported command: "+cmd;
                             }
+                            System.err.println("Error:"+message);
                         }
                     }
                 }
@@ -380,18 +364,19 @@ public class CmdMode {
     }
 
     private void printInputModeHelp() {
-        System.out.println("add <key,local,translate>; add translation.");
-        System.out.println("clear                      clear the screen.");
-        System.out.println("del <key>;                 delete key from list.");
-        System.out.println("dll                        delete last line of input.");
-        System.out.println("exit                       exit tool.");
-        System.out.println("help                       look for help of input mode.");
-        System.out.println("i <path1,path2...>;        set source.");
-        System.out.println("list                       show the list of keys.");
-        System.out.println("l                          show the list of keys.");
-        System.out.println("o <dir>;                   set out dir.");
-        System.out.println("ot <[json|xml]>;           set out type,default is json.");
-        System.out.println("doWork                      doWork do work.");
+        System.out.println("add <key,local,translate>;      add translation.");
+        System.out.println("clear                           clear the screen.");
+        System.out.println("del <key>;                      delete key from list.");
+        System.out.println("dll                             delete last line of input.");
+        System.out.println("exit                            exit tool.");
+        System.out.println("help                            look for help of input mode.");
+        System.out.println("i <path1,path2...>;             set source.");
+        System.out.println("l <path,c|rnum1,num2,num3,v|h>; set excel local,key and translation position," +
+                "path is excel file path and exist,num1 is row or column of key,num2 is of locale,num3 is of translation," +
+                "mean of v is vertical locale and translation,mean of h is horizontal locale and translation,example: l c0,1,2,v");
+        System.out.println("o <dir>;                        set out dir.");
+        System.out.println("ot <[json|xml]>;                set out type,default is json.");
+        System.out.println("start                           start do work.");
     }
 
 
@@ -402,8 +387,8 @@ public class CmdMode {
         float p = 1.0f * complete / total;
         int c = (int)(psWidth * p);
         int s = psWidth-c;
-        String progressText = StringUtil.createStringFromString("█", c)
-                + StringUtil.createStringFromString("░", s)
+        String progressText = StringUtil.createStringFromString("*", c)
+                + StringUtil.createStringFromString("-", s)
                 + String.format(" [%.2f%%]", p*100);
         System.out.print(progressText);
         System.out.print(StringUtil.createStringFromString("\b", progressText.length()));

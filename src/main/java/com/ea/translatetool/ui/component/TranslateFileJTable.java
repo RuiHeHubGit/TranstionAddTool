@@ -57,25 +57,9 @@ public class TranslateFileJTable extends JTable{
         }
         if(getColumnModel().getColumnCount() > 0) {
             TableColumn firstColumn = getColumnModel().getColumn(0);
-            firstColumn.setPreferredWidth(25);
-            firstColumn.setMaxWidth(25);
-            firstColumn.setMinWidth(25);
-
-            int maxLen = 0;
-            String maxLenStr = "";
-            for (int i = 0; i < dataModel.getRowCount(); ++i) {
-                String col1 = (String) dataModel.getValueAt(i, 1);
-                if (col1.length() > maxLen) {
-                    maxLen = col1.length();
-                    maxLenStr = col1;
-                }
-            }
-
-            //calc second need min-width
-            FontMetrics fm = new JLabel().getFontMetrics(getFont());
-            Rectangle2D bounds = fm.getStringBounds(maxLenStr, null);
-            TableColumn secondColumn = getColumnModel().getColumn(1);
-            secondColumn.setPreferredWidth((int) bounds.getWidth());
+            firstColumn.setPreferredWidth(28);
+            firstColumn.setMaxWidth(28);
+            firstColumn.setMinWidth(28);
         }
     }
 
@@ -97,10 +81,16 @@ public class TranslateFileJTable extends JTable{
         return tcr;
     }
 
+    private JCheckBox createJCheckBox(boolean isSelected) {
+        JCheckBox jCheckBox = new JCheckBox(null, null, isSelected);
+        jCheckBox.setMargin(new Insets(0, 5, 0, 0));
+        return jCheckBox;
+    }
+
     class JCheckBoxEditor extends DefaultCellEditor {
 
         public JCheckBoxEditor(boolean checked) {
-            super(new JCheckBox(null, null, checked));
+            super(createJCheckBox(checked));
         }
     }
 
@@ -115,7 +105,7 @@ public class TranslateFileJTable extends JTable{
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            return new JCheckBox(null, null, (Boolean) value);
+            return createJCheckBox((Boolean.valueOf(value.toString())) );
         }
     }
 

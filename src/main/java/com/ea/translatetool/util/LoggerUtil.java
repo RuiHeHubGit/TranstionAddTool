@@ -8,16 +8,15 @@ import java.util.logging.Logger;
  * Created by HeRui on 2018/12/23.
  */
 public class LoggerUtil {
-    public final static String LOG_LEVEL = "logLevel";
     public final static String LEVEL_FINE = "fine";
     public final static String LEVEL_INFO = "info";
     public final static String LEVEL_WARNING = "warning";
     public final static String LEVEL_ERROR = "error";
+    private static final String DEF_LEVEL = LEVEL_INFO;
 
     private final static Logger LOG = Logger.getLogger("tool");
     private final static HashMap<String, Integer> LEVELS = new HashMap<>();
-    private static String logLevel = null;
-    private static Integer LV = 0;
+    private static String logLevel = LEVEL_INFO;
 
     static {
         LEVELS.put(LEVEL_FINE, 1);
@@ -69,22 +68,24 @@ public class LoggerUtil {
 
     private static boolean canLog(String level) {
         if(logLevel == null) {
-            synchronized (LoggerUtil.class) {
-                if(logLevel == null) {
-                    logLevel = System.getProperty(LOG_LEVEL);
-                    if(logLevel != null) {
-                        Integer lv = LEVELS.get(logLevel);
-                        if(lv != null) LV = lv;
-                    }
-                }
-            }
+            logLevel = DEF_LEVEL;
         }
 
         if(logLevel == null) return true;
 
         Integer lv = LEVELS.get(level);
-        if(lv == null) lv = 0;
 
         return lv >= LEVELS.get(logLevel);
+    }
+
+    public static String setLogLevel(String logLevel) {
+        if(logLevel == null) {
+            return LoggerUtil.logLevel;
+        }
+        logLevel = logLevel.toLowerCase();
+        if(LEVELS.containsKey(logLevel)) {
+            LoggerUtil.logLevel = logLevel;
+        }
+        return LoggerUtil.logLevel;
     }
 }

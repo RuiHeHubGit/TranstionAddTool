@@ -5,8 +5,8 @@ import com.ea.translatetool.addit.mode.Translation;
 import com.ea.translatetool.constant.GlobalConstant;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.TreeMap;
 
 /**
  * Created by HeRui on 2018/12/23.
@@ -19,9 +19,10 @@ public class WorkConfig {
     private GlobalConstant.OutType outType;
     private List<Translation> translationList;
     private HashMap<String, String> localMap;
-    private HashMap<String, TranslationLocator> translationLocatorMap;
+    private TreeMap<String, TranslationLocator> translationLocatorMap;
+    private List<File> excelFiles;
 
-    public String getFileNamePrefix() {
+    public String getFilePrefix() {
         return filePrefix;
     }
 
@@ -29,7 +30,7 @@ public class WorkConfig {
         this.filePrefix = filePrefix;
     }
 
-    public String getFileNameSuffix() {
+    public String getFileSuffix() {
         return fileSuffix;
     }
 
@@ -77,11 +78,19 @@ public class WorkConfig {
         this.localMap = localMap;
     }
 
-    public HashMap<String, TranslationLocator> getTranslationLocatorMap() {
+    public TreeMap<String, TranslationLocator> getTranslationLocatorMap() {
         return translationLocatorMap;
     }
 
-    public void setTranslationLocatorMap(HashMap<String, TranslationLocator> translationLocatorMap) {
+    public void setTranslationLocatorMap(TreeMap<String, TranslationLocator> translationLocatorMap) {
         this.translationLocatorMap = translationLocatorMap;
+    }
+
+    public List<File> getExcelFiles() {
+        return excelFiles;
+    }
+
+    public void setExcelFiles(List<File> excelFiles) {
+        this.excelFiles = excelFiles;
     }
 }

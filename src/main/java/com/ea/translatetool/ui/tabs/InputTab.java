@@ -2,63 +2,95 @@ package com.ea.translatetool.ui.tabs;
 
 import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.AdditAssist;
+import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.mode.TranslationLocator;
+import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
 import com.ea.translatetool.ui.component.TranslateFileJTable;
-import com.ea.translatetool.util.ExcelUtil;
-import com.ea.translatetool.util.LoggerUtil;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
+import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.List;
+import java.util.Timer;
 
-public class InputTab extends JPanel implements ActionListener{
+public class InputTab extends JPanel implements ActionListener {
     private UI ui;
     private WorkConfig workConfig;
     private JPanel contentPanel;
+    private Integer fileNamemaxLen;
+    private SpringLayout springLayout;
+    private Spring contentPanelHeight;
     private TreeMap<String, List<File>> excelFiles;
-    private TreeSet<String> updateList;
     private HashMap<String, JTable> tableViewMap;
+    private TreeSet<String> updateKeys;
 
     public InputTab(UI parent) {
         this.ui = parent;
+    }
+
+    public void init() {
         this.excelFiles = new TreeMap<>();
-        this.updateList = new TreeSet<>();
+        this.updateKeys = new TreeSet<>();
         this.tableViewMap = new HashMap<>();
-        this.workConfig = parent.getWorkConfig();
+        this.workConfig = ui.getWorkConfig();
         setLayout(new BorderLayout());
         initBtnGroup();
         initInputFileListTableView();
     }
 
     private void initInputFileListTableView() {
-        contentPanel = new JPanel(new GridLayout(0, 1, 10, 10));
+        springLayout = new SpringLayout();
+        contentPanel = new JPanel(springLayout);
         JScrollPane listScrollPage = new JScrollPane(contentPanel);
         listScrollPage.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         listScrollPage.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         add(listScrollPage, BorderLayout.CENTER);
-        loadExcelFiles();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                loadExcelFiles();
+            }
+        }).start();
     }
 
     private void loadExcelFiles() {
+        final Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if(Addit.isRunning()) {
+                    showFileListTable();
+                } else {
+                    timer.cancel();
+                }
+            }
+        }, 200, 200);
         Object result = Addit.doWork(workConfig, Addit.WORK_SCAN_FILE, Addit.WORK_SCAN_FILE, ui);
         if(result == null) {
             return;
         }
 
-        List<File> fileList = (List<File>) result;
-        for (File f:fileList) {
+        List<File> fileList;
+        if(result instanceof List) {
+            fileList = (List<File>)result;
+        } else {
+            return;
+        }
+
+        for (Object item : fileList) {
+            File f = (File) item;
             String key = f.getParent();
             List<File> oldFileList = excelFiles.get(key);
             if(oldFileList == null) {
@@ -68,17 +100,19 @@ public class InputTab extends JPanel implements ActionListener{
             } else if(!oldFileList.contains(f)){
                 oldFileList.add(f);
             }
-            updateList.add(key);
+            updateKeys.add(key);
         }
-
-        if(!updateList.isEmpty()) {
-            showFileListTable();
+        if(!updateKeys.isEmpty()) {
+            workConfig.setExcelFiles(fileList);
+            Addit.doWork(workConfig, Addit.WORK_CALC_LOCATOR, Addit.WORK_CALC_LOCATOR, ui);
         }
+        updateKeys.clear();
     }
 
     private void showFileListTable() {
 
-        for (String key : updateList) {
+        boolean needAdjWidth = false;
+        for (String key : updateKeys) {
             List<File> files = excelFiles.get(key);
             if(files.isEmpty()) {
                 continue;
@@ -86,57 +120,79 @@ public class InputTab extends JPanel implements ActionListener{
 
             JTable jTable = tableViewMap.get(key);
             if(jTable == null) {
-                JPanel panel = new JPanel(new BorderLayout(2, 2));
+                SpringLayout panelLayout = new SpringLayout();
+                JPanel panel = new JPanel(panelLayout);
                 contentPanel.add(panel);
-                panel.add(new JLabel(" " + key), BorderLayout.NORTH);
+                panel.add(new JLabel(" " + key));
                 jTable = new TranslateFileJTable();
-                panel.add(jTable, BorderLayout.CENTER);
+                panel.add(jTable);
+                panelLayout.putConstraint(SpringLayout.NORTH, jTable, 20, SpringLayout.NORTH, panel);
+                panelLayout.putConstraint(SpringLayout.WEST, jTable, 0, SpringLayout.WEST, panel);
+                panelLayout.putConstraint(SpringLayout.EAST, jTable, 0, SpringLayout.EAST, panel);
+                panelLayout.getConstraints(panel).setHeight(Spring.sum(panelLayout.getConstraints(jTable).getHeight(), Spring.constant(20)));
                 tableViewMap.put(key, jTable);
-            }
-            final Object[][] data = new Object[files.size()][6];
-            TableModel dataModel = new AbstractTableModel() {
-                String[] columnNames = new String[]{"", "file name", "key", "orientation", "local", "translation"};
-                public int getColumnCount() { return columnNames.length; }
-                public int getRowCount() { return data.length;}
-                public Object getValueAt(int row, int col) {return data[row][col];}
-                public String getColumnName(int column) {return columnNames[column];}
-                public Class getColumnClass(int c) {return getValueAt(0, c).getClass();}
-                public boolean isCellEditable(int row, int col) {return true;}
-                public void setValueAt(Object aValue, int row, int column) {
-                    data[row][column] = aValue;
+
+                springLayout.putConstraint(SpringLayout.WEST, panel, -2, SpringLayout.WEST, contentPanel);
+                springLayout.putConstraint(SpringLayout.EAST, panel, 2, SpringLayout.EAST, contentPanel);
+                SpringLayout.Constraints panelCons = springLayout.getConstraints(panel);
+                if (contentPanelHeight == null) {
+                    fileNamemaxLen = 0;
+                    contentPanelHeight = Spring.constant(0);
+                } else {
+                    panelCons.setY(Spring.sum(contentPanelHeight, Spring.constant(10)));
                 }
-            };
+                contentPanelHeight = Spring.sum(contentPanelHeight, panelCons.getHeight());
+                contentPanelHeight = Spring.sum(contentPanelHeight, Spring.constant(10));
+                springLayout.getConstraints(contentPanel).setHeight(contentPanelHeight);
+            }
+
+            DefaultTableModel dataModel = (DefaultTableModel) jTable.getModel();
+            dataModel.setRowCount(files.size());
+            dataModel.setColumnCount(6);
 
             for (int i=0; i<files.size(); ++i) {
                 File file = files.get(i);
+                String fileName = file.getName();
+                FontMetrics fm = new JLabel().getFontMetrics(getFont());
+                Rectangle2D bounds = fm.getStringBounds(fileName, null);
+                if(bounds.getWidth() - 10 > fileNamemaxLen) {
+                    fileNamemaxLen = (int) bounds.getWidth();
+                    needAdjWidth = true;
+                }
+                bounds.getWidth();
                 dataModel.setValueAt(false, i, 0);
-                dataModel.setValueAt(file.getName(), i, 1);
-                try {
-                    TranslationLocator locator = AdditAssist.calcTranslationLocator(
-                            ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0 ), workConfig.getLocalMap(), null);
-                    if(locator != null) {
-                        dataModel.setValueAt(true, i, 0);
-                        if(locator.getKeyLocator() != null) {
-                            dataModel.setValueAt(locator.getKeyLocator(), i, 2);
-                        }
-                        if(locator.getOrientation() != null) {
-                            dataModel.setValueAt(GlobalConstant.Orientation.values()[locator.getOrientation()].toString().toLowerCase(), i, 3);
-                        }
-                        if(locator.getLocalLocator() != null) {
-                            dataModel.setValueAt(locator.getLocalLocator(), i, 4);
-                        }
-                        if(locator.getTranslationLocator() != null) {
-                            dataModel.setValueAt(locator.getTranslationLocator(), i, 5);
-                        }
+                dataModel.setValueAt(fileName, i, 1);
+                TranslationLocator locator = workConfig.getTranslationLocatorMap().get(file.getAbsolutePath());
+                if (locator != null) {
+                    dataModel.setValueAt(true, i, 0);
+                    if (locator.getKeyLocator() != null) {
+                        dataModel.setValueAt(locator.getKeyLocator(), i, 2);
                     }
-                } catch (IOException e) {
-                    LoggerUtil.error(e.getMessage());
+                    if (locator.getOrientation() != null) {
+                        dataModel.setValueAt(GlobalConstant.Orientation.values()[locator.getOrientation()].toString().toLowerCase(), i, 3);
+                    }
+                    if (locator.getLocalLocator() != null) {
+                        dataModel.setValueAt(locator.getLocalLocator(), i, 4);
+                    }
+                    if (locator.getTranslationLocator() != null) {
+                        dataModel.setValueAt(locator.getTranslationLocator(), i, 5);
+                    }
                 }
             }
             jTable.setModel(dataModel);
+            jTable.updateUI();
         }
-        contentPanel.updateUI();
-        updateList.clear();
+
+        if(needAdjWidth) {
+            for (String key : updateKeys) {
+                JTable table = tableViewMap.get(key);
+                if (table.getRowCount() > 0) {
+                    //calc second need min-width
+                    TableColumn secondColumn = table.getColumn(1);
+                    secondColumn.setPreferredWidth(fileNamemaxLen);
+                }
+            }
+        }
     }
 
     private void initBtnGroup() {
@@ -204,27 +260,13 @@ public class InputTab extends JPanel implements ActionListener{
         tableViewMap.clear();
         contentPanel.removeAll();
         contentPanel.updateUI();
-        Addit.getInstance().getSourceFiles().clear();
+        workConfig.getExcelFiles().clear();
+        fileNamemaxLen = null;
+        contentPanelHeight = null;
     }
 
     private void addInputPath() {
-        FileFilter fileFilter = new FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                if(f.isDirectory() || (f.isFile()
-                        && !f.getName().startsWith("~$")
-                        && (f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
-                        || f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX)))) {
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public String getDescription() {
-                return "directory;*"+ExcelUtil.SUFFIX_XLS+";*"+ExcelUtil.SUFFIX_XLSX;
-            }
-        };
+        FileFilter fileFilter = AdditAssist.createExcelFileFilter();
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
@@ -244,7 +286,12 @@ public class InputTab extends JPanel implements ActionListener{
             for (File file : files) {
                 workConfig.getInput().add(file);
             }
-            loadExcelFiles();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    loadExcelFiles();
+                }
+            }).start();
         }
 
     }

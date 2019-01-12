@@ -9,6 +9,7 @@ import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.util.*;
 
+import javax.swing.filechooser.FileFilter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -60,12 +61,12 @@ public class AdditAssist {
         workConfig.setInput(files);
         workConfig.setOutput(new File(config.getOutPath()));
         workConfig.setOutType(GlobalConstant.OutType.TYPE_JSON);
-        HashMap localMap;
+        HashMap<String, String> localMap;
         try {
-            localMap = loadLocalMap(config.getLocalMapFilePath());
+            localMap = loadLocalMap(config.getLocalMapFilePath(), false);
         } catch (IOException e) {
             LoggerUtil.error(e.getMessage());
-            localMap = new HashMap();
+            localMap = new HashMap<>();
         }
         workConfig.setLocalMap(localMap);
         workConfig.setFilePrefix(config.getFilePrefix());
@@ -81,15 +82,16 @@ public class AdditAssist {
         if(outPath.exists()) {
             workConfig.setOutput(outPath);
         }
-        workConfig.setTranslationLocatorMap(new HashMap<String, TranslationLocator>());
+        workConfig.setTranslationLocatorMap(new TreeMap<String, TranslationLocator>());
         workConfig.setTranslationList(new ArrayList<Translation>());
+        workConfig.setExcelFiles(new ArrayList<File>());
         return workConfig;
     }
 
 
-    public static HashMap<String, String> loadLocalMap(String localMapFilePath) throws IOException {
+    public static HashMap<String, String> loadLocalMap(String localMapFilePath, boolean setToDef) throws IOException {
         File file = new File(localMapFilePath);
-        if(!file.exists() || file.isDirectory()) {
+        if(setToDef || !file.exists() || file.isDirectory()) {
             if(file.isDirectory()) {
                 file = new File(file, GlobalConstant.DEF_LOCAL_MAP_FILE_NAME);
             }
@@ -132,7 +134,7 @@ public class AdditAssist {
         ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
         Properties properties = new Properties();
         properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, localMapFilePath);
-        return configRepository.load(HashMap.class, properties);
+        return configRepository.load(HashMap.class, null, properties);
     }
 
 
@@ -190,7 +192,7 @@ public class AdditAssist {
                 localLocator = i;
             }
         }
-        if(maxLocalSameLv < 1.0f && rows > columns) {
+        if(maxLocalSameLv < 1.0f) {
             for (int i = 0; i < columns; ++i) {
                 columnContents.clear();
                 for (int j = 0; j < rows; ++j) {
@@ -382,5 +384,23 @@ public class AdditAssist {
         }
 
         return translations;
+    }
+
+    public static FileFilter createExcelFileFilter() {
+        FileFilter fileFilter = new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || (f.isFile()
+                        && !f.getName().startsWith("~$")
+                        && (f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLS)
+                        || f.getAbsolutePath().endsWith(ExcelUtil.SUFFIX_XLSX)));
+            }
+
+            @Override
+            public String getDescription() {
+                return "directory;*"+ExcelUtil.SUFFIX_XLS+";*"+ExcelUtil.SUFFIX_XLSX;
+            }
+        };
+        return fileFilter;
     }
 }

@@ -7,7 +7,7 @@ import com.ea.translatetool.addit.mode.WorkStage;
  */
 public interface WorkCallback {
     void onStart(WorkStage stage);
-    void onProgress(long complete, long total);
+    void onProgress(long complete, long total, String info);
     void onDone(WorkStage stage);
     boolean onError(Throwable t);
 }
