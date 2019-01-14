@@ -28,6 +28,14 @@ public class LoggerUtil {
     public static void error(String msg) {
         if(canLog(LEVEL_ERROR)) {
             LOG.severe(msg);
+            StackTraceElement[] stackElements = new Throwable().getStackTrace();
+            if(stackElements != null)
+            {
+                for(int i = 0; i < stackElements.length; i++)
+                {
+                    System.err.println(""+ stackElements[i]);
+                }
+            }
         }
     }
 

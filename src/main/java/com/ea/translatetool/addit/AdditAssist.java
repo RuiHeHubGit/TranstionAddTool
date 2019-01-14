@@ -138,7 +138,7 @@ public class AdditAssist {
     }
 
 
-    public static TranslationLocator calcTranslationLocator(List<List<String>> excelContent, HashMap<String,String> localMap, TranslationLocator locator) {
+    public static TranslationLocator calcTranslationLocator(List<List<String>> excelContent, HashMap<String, String> localMap, TranslationLocator locator) {
 
         if(excelContent == null || excelContent.isEmpty()
                 || excelContent.size() < 3 && excelContent.get(0).size() < 3) {
@@ -159,14 +159,9 @@ public class AdditAssist {
 
         float maxKeySameLv = 0.5f, maxLocalSameLv = 0.5f, maxTranslationSameLv = 0.5f;
         float keySameLv, localSameLv, translationSameLv;
-        List<String> columnContents = new ArrayList<>();
 
         for (int i = 0; i < columns && i < 3; ++i) {
-            columnContents.clear();
-            for (int j = 0; j < rows; ++j) {
-                columnContents.add(excelContent.get(j).get(i));
-            }
-            keySameLv = calcSimilarLevel(columnContents, GlobalConstant.REGEX_KEY);
+            keySameLv = calcSimilarLevel(getTableColumnTexts(excelContent, i), GlobalConstant.REGEX_KEY);
             if (keySameLv >= maxKeySameLv) {
                 maxKeySameLv = keySameLv;
                 keyLocator = "c" + i;
@@ -194,11 +189,7 @@ public class AdditAssist {
         }
         if(maxLocalSameLv < 1.0f) {
             for (int i = 0; i < columns; ++i) {
-                columnContents.clear();
-                for (int j = 0; j < rows; ++j) {
-                    columnContents.add(excelContent.get(j).get(i));
-                }
-                localSameLv = calcSimilarLocalLevel(columnContents, localMap);
+                localSameLv = calcSimilarLocalLevel(getTableColumnTexts(excelContent, i), localMap);
                 if (localSameLv >= maxLocalSameLv) {
                     maxLocalSameLv = localSameLv;
                     localLocator = i;
@@ -216,11 +207,7 @@ public class AdditAssist {
                 if(i == num || i == localLocator) {
                     continue;
                 }
-                columnContents.clear();
-                for (int j = 0; j < rows; ++j) {
-                    columnContents.add(excelContent.get(j).get(i));
-                }
-                translationSameLv = calcListNotSimilarLevel(columnContents);
+                translationSameLv = calcListNotSimilarLevel(getTableColumnTexts(excelContent, i));
                 if(translationSameLv > maxTranslationSameLv) {
                     maxTranslationSameLv = translationSameLv;
                     translationLocator = i;
@@ -350,8 +337,8 @@ public class AdditAssist {
     public static List<String> getTranslationLocals(List<List<String>> excelContent, TranslationLocator locator) {
         List<String> locals = new ArrayList<>();
         if(locator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
-            for (String key : excelContent.get(locator.getLocalLocator())) {
-                locals.add(key);
+            for (String local : excelContent.get(locator.getLocalLocator())) {
+                locals.add(local);
             }
         } else {
             int size = excelContent.size();
@@ -362,11 +349,10 @@ public class AdditAssist {
         return locals;
     }
 
-    public static List<Translation> getTranslationList(String key, String local, String translateText, HashMap<String, String> localMap) {
+    public static List<Translation> getTranslationList(String key, String local, String translateText, HashMap<String, String> localMap, File file) {
         List<Translation> translations = new ArrayList<>();
         if(translateText.isEmpty()
-                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()
-                || !localMap.containsKey(local)) {
+                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()) {
             return translations;
         }
 
@@ -377,9 +363,11 @@ public class AdditAssist {
         String[] localArr = localStr.split(",");
         for (String l : localArr) {
             Translation translation = new Translation();
+            translation.setLocaleKey(local);
             translation.setKey(key);
             translation.setLocal(l.trim());
             translation.setTranslation(translateText);
+            translation.setFile(file);
             translations.add(translation);
         }
 
@@ -402,5 +390,14 @@ public class AdditAssist {
             }
         };
         return fileFilter;
+    }
+
+    public static List<String> getTableColumnTexts(List<List<String>> table, int colIndex) {
+        List<String> columnContents = new ArrayList<>();
+        int rows = table.size();
+        for (int j = 0; j < rows; ++j) {
+            columnContents.add(table.get(j).get(colIndex));
+        }
+        return  columnContents;
     }
 }

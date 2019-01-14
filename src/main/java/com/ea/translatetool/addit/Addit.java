@@ -2,6 +2,7 @@ package com.ea.translatetool.addit;
 
 import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
 import com.ea.translatetool.addit.exception.InvalidExcelContentException;
+import com.ea.translatetool.addit.exception.NoFoundLocaleException;
 import com.ea.translatetool.addit.exception.NotFoundExcelException;
 import com.ea.translatetool.addit.mode.Translation;
 import com.ea.translatetool.addit.mode.TranslationLocator;
@@ -16,6 +17,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +33,7 @@ public class Addit {
     private int stage;
     private int stageCount;
     private WorkStage workStage;
+    private static ConcurrentLinkedQueue<Translation> noFoundLocaleList;
 
     private Addit() {}
 
@@ -134,7 +138,7 @@ public class Addit {
                         List<Translation> notSave = saveTranslateToFile(localAllTranslations, getLocalFile(workConfig, lastLocal),
                                 workConfig.getOutType(), false);
                         if(notSave != null && !notSave.isEmpty()) {
-                            if(callback != null && !callback.onError(new AlreadyExistKeyException(notSave, notSave.size()+" keys repeat."))) {
+                            if(callback == null || callback.onError(new AlreadyExistKeyException(notSave, notSave.size()+" keys repeat."))) {
                                 saveTranslateToFile(notSave, getLocalFile(workConfig, lastLocal),
                                         workConfig.getOutType(), false);
                             }
@@ -315,7 +319,15 @@ public class Addit {
         return resultList;
     }
 
-    private void loadAllTranslate(WorkConfig workConfig, WorkCallback callback) throws IOException, InvalidExcelContentException, NotFoundExcelException {
+    private void loadAllTranslate(WorkConfig workConfig, WorkCallback callback) throws IOException, InvalidExcelContentException, NotFoundExcelException, NoFoundLocaleException {
+        if(noFoundLocaleList == null) {
+            noFoundLocaleList = new ConcurrentLinkedQueue<>();
+        } else {
+            noFoundLocaleList.clear();
+        }
+
+        workConfig.getTranslationList().clear();
+
         List<File> excelFiles = workConfig.getExcelFiles();
         if(excelFiles.isEmpty()) {
             throw new NotFoundExcelException("not excel file");
@@ -329,7 +341,7 @@ public class Addit {
             try {
                 loadTranslateFromFile(workConfig, excelFile);
             } catch (Exception e) {
-                if(null != callback && callback.onError(e)) {
+                if(null == callback || callback.onError(e)) {
                     throw e;
                 }
             }
@@ -342,11 +354,25 @@ public class Addit {
         if(callback != null) {
             callback.onProgress(excelFiles.size(), excelFiles.size(), "");
         }
+
+        HashMap<String, String> localMap = workConfig.getLocalMap();
+        for (Translation translation : workConfig.getTranslationList()) {
+            if(!localMap.containsKey(translation.getLocaleKey())) {
+                noFoundLocaleList.add(translation);
+            }
+        }
+        if(!noFoundLocaleList.isEmpty()) {
+            NoFoundLocaleException notFoundExcelException = new NoFoundLocaleException (noFoundLocaleList,
+                    "had locale not found in locale map. count:"+noFoundLocaleList.size());
+            if(null == callback || callback.onError(notFoundExcelException)) {
+                throw notFoundExcelException;
+            }
+        }
         workStage.setSuccess(true);
         onDone(callback, workStage);
     }
 
-    private void loadTranslateFromFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
+    private static void loadTranslateFromFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
         TranslationLocator translationLocator = workConfig.getTranslationLocatorMap().get(file.getAbsolutePath());
         HashMap<String, String> localMap = workConfig.getLocalMap();
         if(translationLocator == null) {
@@ -368,7 +394,7 @@ public class Addit {
                     List<String> row = excelContent.get(i);
                     List<Translation> translations = AdditAssist.getTranslationList(keys.get(i),
                             row.get(translationLocator.getLocalLocator()),
-                            row.get(translationLocator.getTranslationLocator()), localMap);
+                            row.get(translationLocator.getTranslationLocator()), localMap, file);
                     if(translations != null) {
                         translationList.addAll(translations);
                     }
@@ -376,14 +402,11 @@ public class Addit {
             } else if(translationLocator.getKeyLocator().startsWith("r")
                     && translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
                 int columns = excelContent.get(0).size();
-                List<String> columnTexts = new ArrayList<>();
                 for (int i = 0; i<columns; ++i) {
-                    for (List<String > row : excelContent) {
-                        columnTexts.add(row.get(i));
-                    }
+                    List<String> columnTexts = AdditAssist.getTableColumnTexts(excelContent, i);
                     List<Translation> translations = AdditAssist.getTranslationList(keys.get(i),
                             columnTexts.get(translationLocator.getLocalLocator()),
-                            columnTexts.get(translationLocator.getTranslationLocator()), localMap);
+                            columnTexts.get(translationLocator.getTranslationLocator()), localMap, file);
                     columnTexts.clear();
                     if(translations != null) {
                         translationList.addAll(translations);
@@ -394,10 +417,17 @@ public class Addit {
                 for (int i=0; i<keys.size(); ++i) {
                     for (int j=0; j<locals.size(); ++j) {
                         List<Translation> translations;
-                        if(translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal())
-                            translations = AdditAssist.getTranslationList(keys.get(i), locals.get(j), excelContent.get(i).get(j), localMap);
-                        else
-                            translations = AdditAssist.getTranslationList( keys.get(i), locals.get(j), excelContent.get(j).get(i), localMap);
+                        if(translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
+                            if(AdditAssist.calcListNotSimilarLevel(excelContent.get(i)) < 0.5) {
+                                break;
+                            }
+                            translations = AdditAssist.getTranslationList(keys.get(i), locals.get(j), excelContent.get(i).get(j), localMap, file);
+                        } else {
+                            if(AdditAssist.calcListNotSimilarLevel(AdditAssist.getTableColumnTexts(excelContent, i)) < 0.5) {
+                                break;
+                            }
+                            translations = AdditAssist.getTranslationList(keys.get(i), locals.get(j), excelContent.get(j).get(i), localMap, file);
+                        }
                         if(translations != null) {
                             translationList.addAll(translations);
                         }
@@ -421,5 +451,9 @@ public class Addit {
 
     public static boolean isRunning() {
         return running;
+    }
+
+    public static ConcurrentLinkedQueue<Translation> getNoFoundLocaleList() {
+        return noFoundLocaleList;
     }
 }

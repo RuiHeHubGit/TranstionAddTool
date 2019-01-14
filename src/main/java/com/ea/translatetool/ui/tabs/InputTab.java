@@ -2,13 +2,11 @@ package com.ea.translatetool.ui.tabs;
 
 import com.ea.translatetool.addit.Addit;
 import com.ea.translatetool.addit.AdditAssist;
-import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.mode.TranslationLocator;
-import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.config.WorkConfig;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
-import com.ea.translatetool.ui.component.TranslateFileJTable;
+import com.ea.translatetool.ui.component.ZebraStripeJTable;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
@@ -23,17 +21,18 @@ import java.io.File;
 import java.util.*;
 import java.util.List;
 import java.util.Timer;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 public class InputTab extends JPanel implements ActionListener {
     private UI ui;
     private WorkConfig workConfig;
     private JPanel contentPanel;
-    private Integer fileNamemaxLen;
+    private Integer fileNameMaxLen;
     private SpringLayout springLayout;
     private Spring contentPanelHeight;
     private TreeMap<String, List<File>> excelFiles;
     private HashMap<String, JTable> tableViewMap;
-    private TreeSet<String> updateKeys;
+    private ConcurrentSkipListSet<String> updateKeys;
 
     public InputTab(UI parent) {
         this.ui = parent;
@@ -41,7 +40,7 @@ public class InputTab extends JPanel implements ActionListener {
 
     public void init() {
         this.excelFiles = new TreeMap<>();
-        this.updateKeys = new TreeSet<>();
+        this.updateKeys = new ConcurrentSkipListSet<>();
         this.tableViewMap = new HashMap<>();
         this.workConfig = ui.getWorkConfig();
         setLayout(new BorderLayout());
@@ -70,9 +69,9 @@ public class InputTab extends JPanel implements ActionListener {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                if(Addit.isRunning()) {
-                    showFileListTable();
-                } else {
+                showFileListTable();
+                if(!Addit.isRunning()) {
+                    updateKeys.clear();
                     timer.cancel();
                 }
             }
@@ -106,7 +105,6 @@ public class InputTab extends JPanel implements ActionListener {
             workConfig.setExcelFiles(fileList);
             Addit.doWork(workConfig, Addit.WORK_CALC_LOCATOR, Addit.WORK_CALC_LOCATOR, ui);
         }
-        updateKeys.clear();
     }
 
     private void showFileListTable() {
@@ -118,13 +116,16 @@ public class InputTab extends JPanel implements ActionListener {
                 continue;
             }
 
-            JTable jTable = tableViewMap.get(key);
+            ZebraStripeJTable jTable = (ZebraStripeJTable) tableViewMap.get(key);
             if(jTable == null) {
                 SpringLayout panelLayout = new SpringLayout();
                 JPanel panel = new JPanel(panelLayout);
                 contentPanel.add(panel);
                 panel.add(new JLabel(" " + key));
-                jTable = new TranslateFileJTable();
+                jTable = new ZebraStripeJTable();
+                jTable.setCheckBoxWidth(28);
+                jTable.setColumnToCheckBox(0, true);
+                jTable.setColumnToComboBox(3, new String[]{"horizontal","vertical"});
                 panel.add(jTable);
                 panelLayout.putConstraint(SpringLayout.NORTH, jTable, 20, SpringLayout.NORTH, panel);
                 panelLayout.putConstraint(SpringLayout.WEST, jTable, 0, SpringLayout.WEST, panel);
@@ -136,7 +137,7 @@ public class InputTab extends JPanel implements ActionListener {
                 springLayout.putConstraint(SpringLayout.EAST, panel, 2, SpringLayout.EAST, contentPanel);
                 SpringLayout.Constraints panelCons = springLayout.getConstraints(panel);
                 if (contentPanelHeight == null) {
-                    fileNamemaxLen = 0;
+                    fileNameMaxLen = 0;
                     contentPanelHeight = Spring.constant(0);
                 } else {
                     panelCons.setY(Spring.sum(contentPanelHeight, Spring.constant(10)));
@@ -153,13 +154,14 @@ public class InputTab extends JPanel implements ActionListener {
             for (int i=0; i<files.size(); ++i) {
                 File file = files.get(i);
                 String fileName = file.getName();
+                //calc second need min-width
                 FontMetrics fm = new JLabel().getFontMetrics(getFont());
                 Rectangle2D bounds = fm.getStringBounds(fileName, null);
-                if(bounds.getWidth() - 10 > fileNamemaxLen) {
-                    fileNamemaxLen = (int) bounds.getWidth();
+                if(bounds.getWidth() - 10 > fileNameMaxLen) {
+                    fileNameMaxLen = (int) bounds.getWidth();
                     needAdjWidth = true;
                 }
-                bounds.getWidth();
+
                 dataModel.setValueAt(false, i, 0);
                 dataModel.setValueAt(fileName, i, 1);
                 TranslationLocator locator = workConfig.getTranslationLocatorMap().get(file.getAbsolutePath());
@@ -180,16 +182,24 @@ public class InputTab extends JPanel implements ActionListener {
                 }
             }
             jTable.setModel(dataModel);
-            jTable.updateUI();
+
+            final JTable finalJTable = jTable;
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    // TODO Auto-generated method stub
+                    finalJTable.updateUI();
+                }
+            });
+
         }
 
         if(needAdjWidth) {
             for (String key : updateKeys) {
                 JTable table = tableViewMap.get(key);
                 if (table.getRowCount() > 0) {
-                    //calc second need min-width
-                    TableColumn secondColumn = table.getColumn(1);
-                    secondColumn.setPreferredWidth(fileNamemaxLen);
+                    TableColumn secondColumn = table.getColumnModel().getColumn(1);
+                    secondColumn.setPreferredWidth(fileNameMaxLen);
                 }
             }
         }
@@ -231,7 +241,7 @@ public class InputTab extends JPanel implements ActionListener {
                     addInputPath();
                     break;
                 case "clean":
-                    cleanSelectPath();
+                    cleanAllInPath();
                     break;
                 case "select all":
                     selectAll(true);
@@ -255,13 +265,14 @@ public class InputTab extends JPanel implements ActionListener {
         }
     }
 
-    private void cleanSelectPath() {
+    private void cleanAllInPath() {
         excelFiles.clear();
         tableViewMap.clear();
         contentPanel.removeAll();
         contentPanel.updateUI();
+        workConfig.getTranslationLocatorMap().clear();
         workConfig.getExcelFiles().clear();
-        fileNamemaxLen = null;
+        fileNameMaxLen = null;
         contentPanelHeight = null;
     }
 
@@ -293,7 +304,6 @@ public class InputTab extends JPanel implements ActionListener {
                 }
             }).start();
         }
-
     }
 
     public HashMap<String, JTable> getTableViewMap() {

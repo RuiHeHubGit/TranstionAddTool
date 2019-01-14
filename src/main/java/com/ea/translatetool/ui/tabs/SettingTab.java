@@ -7,7 +7,7 @@ import com.ea.translatetool.config.ConfigRepository;
 import com.ea.translatetool.config.FileConfigRepositoryImpl;
 import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.UI;
-import com.ea.translatetool.ui.component.FileListTable;
+import com.ea.translatetool.ui.component.ZebraStripeJTable;
 import com.ea.translatetool.util.LoggerUtil;
 
 import javax.swing.*;
@@ -15,13 +15,10 @@ import javax.swing.border.BevelBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.filechooser.FileFilter;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
@@ -35,7 +32,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
     private JTextField tfExistKeySaveDir;
     private JTextField tfLogSaveDir;
     private JComboBox<String> jcobLogLevel;
-    private JTable jtInPath;
+    private ZebraStripeJTable jtInPath;
     private JTextField jfOutPath;
     private JTextField jfFilePrefix;
     private JTextField jfFileSuffix;
@@ -45,7 +42,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
     private JButton btnDefault;
     private JButton btnCancel;
     private JDialog localeMapDlg;
-    private JTable jtLocaleMap;
+    private ZebraStripeJTable jtLocaleMap;
 
     public SettingTab(UI ui) {
         this.ui = ui;
@@ -79,7 +76,9 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
         tfLogSaveDir = new JTextField(config.getLogSaveDir());
         jcobLogLevel = new JComboBox<>(new String[]{LEVEL_FINE, LEVEL_INFO, LEVEL_WARNING, LEVEL_ERROR});
         jcobLogLevel.setSelectedItem(config.getLogLevel());
-        jtInPath = new FileListTable();
+        jtInPath = new ZebraStripeJTable();
+        jtInPath.setColumnToCheckBox(1, true);
+        jtInPath.setCheckBoxWidth(30);
         jfOutPath = new JTextField(config.getOutPath());
         jfFilePrefix = new JTextField(config.getFilePrefix());
         jfFileSuffix = new JTextField(config.getFileSuffix());
@@ -411,26 +410,8 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
         localeMapDlg.setSize(500, 600);
         localeMapDlg.setLocationRelativeTo(null);
         localeMapDlg.setLayout(new BorderLayout(5, 5));
-        jtLocaleMap = new JTable() {
-            DefaultTableCellRenderer tcr = new DefaultTableCellRenderer(){
-                private static final long serialVersionUID = 1L;
-                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column){
-                    if(row%2 == 0)
-                        setBackground(Color.WHITE);//设置奇数行底色
-                    else if(row%2 == 1)
-                        setBackground(new Color(220,230,241));//设置偶数行底色
-                    return super.getTableCellRendererComponent(table, value,isSelected, hasFocus, row, column);
-                }
-            };
+        jtLocaleMap = new ZebraStripeJTable(new Object[][]{}, new Object[]{"Locale Name", "Locale Value"});
 
-            @Override
-            public TableCellRenderer getCellRenderer(int row, int column) {
-                return tcr;
-            }
-        };
-        DefaultTableModel defaultTableModel = new DefaultTableModel(new Object[][]{}, new Object[]{"Locale Name", "Locale Value"});
-        jtLocaleMap.setRowHeight(20);
-        jtLocaleMap.setModel(defaultTableModel);
         localeMapDlg.add(new JScrollPane(jtLocaleMap), BorderLayout.CENTER);
 
         final JButton btnDef = new JButton("Default");

@@ -6,6 +6,7 @@ import com.ea.translatetool.addit.AdditAssist;
 import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
 import com.ea.translatetool.addit.exception.InvalidExcelContentException;
+import com.ea.translatetool.addit.exception.NoFoundLocaleException;
 import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
@@ -15,6 +16,7 @@ import com.ea.translatetool.constant.GlobalConstant;
 import com.ea.translatetool.ui.tabs.InputTab;
 import com.ea.translatetool.ui.tabs.OutputTab;
 import com.ea.translatetool.ui.tabs.SettingTab;
+import com.ea.translatetool.ui.tabs.UnableHandleTab;
 import com.ea.translatetool.util.LoggerUtil;
 import com.ea.translatetool.util.PID;
 import com.ea.translatetool.util.ShutdownHandler;
@@ -42,6 +44,7 @@ public class UI extends JFrame implements WorkCallback{
     private JTabbedPane tabbedPane;
     private JPanel footPanel;
     private InputTab inputTab;
+    private UnableHandleTab unableHandleTab;
     private OutputTab outputTab;
     private SettingTab settingTab;
     private JLabel lbInfo;
@@ -101,13 +104,7 @@ public class UI extends JFrame implements WorkCallback{
             return;
         }
         workConfig.setExcelFiles(fileList);
-
-        final File outPath = new File(outputTab.getOutPath());
-        if(!outPath.exists() && !outPath.isDirectory()) {
-            JOptionPane.showMessageDialog(this, "Invalid path fo out,please reset it.", "prompt", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        workConfig.setOutput(outPath);
+        workConfig.setOutput(new File(outputTab.getOutPath()));
 
         new Thread(new Runnable() {
             @Override
@@ -203,15 +200,18 @@ public class UI extends JFrame implements WorkCallback{
 
         tabbedPane = new JTabbedPane();
         inputTab = new InputTab(this);
+        unableHandleTab = new UnableHandleTab(this);
         outputTab = new OutputTab(this);
         settingTab = new SettingTab(this);
 
         mainContainer.add(tabbedPane, BorderLayout.CENTER);
         tabbedPane.add("input", inputTab);
+        tabbedPane.add("unableHandle", unableHandleTab);
         tabbedPane.add("output", outputTab);
         tabbedPane.add("setting", settingTab);
 
         inputTab.init();
+        unableHandleTab.init();
         outputTab.init();
         settingTab.init();
     }
@@ -336,10 +336,15 @@ public class UI extends JFrame implements WorkCallback{
         lbInfo.setText("");
         lbStage.setText(stageInfo);
         btnStart.setEnabled(true);
-        btnStart.updateUI();
         if(stage.getType() == Addit.WORK_TRANSLATION_TO_FILE) {
             outputTab.showFileListTable();
         }
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                tabbedPane.updateUI();
+            }
+        });
     }
 
     @Override
@@ -354,6 +359,11 @@ public class UI extends JFrame implements WorkCallback{
             } catch (IOException e) {
                 LoggerUtil.error(e.getMessage());
             }
+            return true;
+        } else if(t instanceof NoFoundLocaleException) {
+            tabbedPane.setSelectedIndex(1);
+            unableHandleTab.update();
+            JOptionPane.showMessageDialog(ui, t.getMessage(), "error", JOptionPane.ERROR_MESSAGE);
             return true;
         } else {
             LoggerUtil.exceptionLog(t);

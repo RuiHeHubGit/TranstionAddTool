@@ -1,20 +1,16 @@
 package com.ea.translatetool.addit.mode;
 
+import java.io.File;
+
 /**
  * Created by HeRui on 2018/12/22.
  */
 public class Translation {
     private String key;
+    private String localeKey;
     private String local;
     private String translation;
-
-    public Translation() {}
-
-    public Translation(String translation, String key, String local) {
-        this.translation = translation;
-        this.key = key;
-        this.local = local;
-    }
+    private File file;
 
     public String getKey() {
         return key;
@@ -22,6 +18,14 @@ public class Translation {
 
     public void setKey(String key) {
         this.key = key;
+    }
+
+    public String getLocaleKey() {
+        return localeKey;
+    }
+
+    public void setLocaleKey(String localeKey) {
+        this.localeKey = localeKey;
     }
 
     public String getLocal() {
@@ -40,12 +44,11 @@ public class Translation {
         this.translation = translation;
     }
 
-    @Override
-    public String toString() {
-        return "Translation{\n" +
-                "key='" + key + "\'\n" +
-                ", local='" + local + "\'\n" +
-                ", translation='" + translation + "\'\n" +
-                '}';
+    public File getFile() {
+        return file;
+    }
+
+    public void setFile(File file) {
+        this.file = file;
     }
 }
