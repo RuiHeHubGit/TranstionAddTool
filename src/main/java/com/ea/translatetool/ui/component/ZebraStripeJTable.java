@@ -30,6 +30,7 @@ public class ZebraStripeJTable extends JTable {
     }
 
     private void init() {
+        checkBoxWidth = 30;
         jBoxMap = new HashMap<>();
         setRowHeight(20);
         getTableHeader().setReorderingAllowed(false);
@@ -99,8 +100,11 @@ public class ZebraStripeJTable extends JTable {
     public TableCellRenderer getCellRenderer(int row, int column) {
         Object boxMode = jBoxMap.get(column);
         if(boxMode instanceof Boolean) {
-            getColumnModel().getColumn(column).setMaxWidth(checkBoxWidth);
-            getColumnModel().getColumn(column).setHeaderRenderer(
+            TableColumn tableColumn = getColumnModel().getColumn(column);
+            tableColumn.setMaxWidth(checkBoxWidth);
+            tableColumn.setPreferredWidth(checkBoxWidth);
+            tableColumn.setMinWidth(checkBoxWidth);
+            tableColumn.setHeaderRenderer(
                     new TableHeaderCheckBoxCellRenderer(column));
             return jCheckBoxTableCellRenderer;
         }

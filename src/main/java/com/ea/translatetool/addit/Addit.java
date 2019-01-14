@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -356,8 +355,10 @@ public class Addit {
         }
 
         HashMap<String, String> localMap = workConfig.getLocalMap();
+        Set<String> ignoreLocaleSet = workConfig.getIgnoreLocaleSet();
         for (Translation translation : workConfig.getTranslationList()) {
-            if(!localMap.containsKey(translation.getLocaleKey())) {
+            if(!localMap.containsKey(translation.getLocaleKey())
+                    && (ignoreLocaleSet == null || !ignoreLocaleSet.contains(translation.getLocaleKey()))) {
                 noFoundLocaleList.add(translation);
             }
         }

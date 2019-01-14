@@ -21,6 +21,7 @@ public class WorkConfig {
     private HashMap<String, String> localMap;
     private TreeMap<String, TranslationLocator> translationLocatorMap;
     private List<File> excelFiles;
+    private Set<String> ignoreLocaleSet;
 
     public String getFilePrefix() {
         return filePrefix;
@@ -92,5 +93,13 @@ public class WorkConfig {
 
     public void setExcelFiles(List<File> excelFiles) {
         this.excelFiles = excelFiles;
+    }
+
+    public Set<String> getIgnoreLocaleSet() {
+        return ignoreLocaleSet;
+    }
+
+    public void setIgnoreLocaleSet(Set<String> ignoreLocaleSet) {
+        this.ignoreLocaleSet = ignoreLocaleSet;
     }
 }

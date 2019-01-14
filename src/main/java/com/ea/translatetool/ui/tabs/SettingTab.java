@@ -41,7 +41,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
     private JButton btnSave;
     private JButton btnDefault;
     private JButton btnCancel;
-    private JDialog localeMapDlg;
+    private LocaleMapDiaDlg localeMapDlg;
     private ZebraStripeJTable jtLocaleMap;
 
     public SettingTab(UI ui) {
@@ -385,162 +385,11 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
 
     private void showLocaleMapDialog() {
         if(localeMapDlg == null) {
-            localeMapDlg = new JDialog(ui, false);
-            initLocaleMapDlg();
+            localeMapDlg = new LocaleMapDiaDlg(ui, false);
+            localeMapDlg.initLocaleMapDlg();
         }
-        showLocaleMap();
+        localeMapDlg.showLocaleMap();
         localeMapDlg.setVisible(true);
-    }
-
-    private void showLocaleMap() {
-        DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
-        HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
-        Set<String> keys = localMap.keySet();
-        tableModel.setRowCount(keys.size());
-        tableModel.setColumnCount(2);
-        int index = 0;
-        for (String key : keys) {
-            tableModel.setValueAt(key, index, 0);
-            tableModel.setValueAt(localMap.get(key), index, 1);
-            ++index;
-        }
-    }
-
-    private void initLocaleMapDlg() {
-        localeMapDlg.setSize(500, 600);
-        localeMapDlg.setLocationRelativeTo(null);
-        localeMapDlg.setLayout(new BorderLayout(5, 5));
-        jtLocaleMap = new ZebraStripeJTable(new Object[][]{}, new Object[]{"Locale Name", "Locale Value"});
-
-        localeMapDlg.add(new JScrollPane(jtLocaleMap), BorderLayout.CENTER);
-
-        final JButton btnDef = new JButton("Default");
-        final JButton btnSave = new JButton("Save");
-        btnSave.setEnabled(false);
-        final JButton btnCancel = new JButton("Cancel");
-        btnCancel.setEnabled(false);
-        final JButton btnRemove = new JButton("Remove");
-        btnRemove.setEnabled(false);
-        final JButton btnAdd = new JButton("Add New");
-        JPanel opTablePanel = new JPanel();
-        opTablePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 10));
-        opTablePanel.setLayout(new BoxLayout(opTablePanel, BoxLayout.LINE_AXIS));
-        opTablePanel.add(Box.createHorizontalGlue());
-        opTablePanel.add(btnSave);
-        opTablePanel.add(Box.createHorizontalStrut(15));
-        opTablePanel.add(btnCancel);
-        opTablePanel.add(Box.createHorizontalStrut(15));
-        opTablePanel.add(btnRemove);
-        opTablePanel.add(Box.createHorizontalStrut(15));
-        opTablePanel.add(btnAdd);
-        opTablePanel.add(Box.createHorizontalStrut(15));
-        opTablePanel.add(btnDef);
-        opTablePanel.add(Box.createHorizontalStrut(15));
-
-        btnDef.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int opt = JOptionPane.showConfirmDialog(localeMapDlg, "Are you sure you want to restore the default locale map?", "prompt", JOptionPane.YES_NO_OPTION);
-                if(JOptionPane.YES_OPTION != opt) {
-                    return;
-                }
-                btnDef.setEnabled(false);
-                try {
-                    HashMap<String, String> newLocaleMap = AdditAssist.loadLocalMap(config.getLocalMapFilePath(), true);
-                    HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
-                    localMap.clear();
-                    localMap.putAll(newLocaleMap);
-                    showLocaleMap();
-                } catch (IOException e1) {
-                    btnDef.setEnabled(true);
-                    LoggerUtil.error(e1.getMessage());
-                    JOptionPane.showMessageDialog(localeMapDlg, "set to default failed.", "error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
-        btnSave.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                btnSave.setEnabled(false);
-                btnCancel.setEnabled(false);
-                DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
-                HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
-                localMap.clear();
-                for (int i=0; i<tableModel.getRowCount(); ++i) {
-                    String keyName = tableModel.getValueAt(i, 0).toString();
-                    String keyValue = tableModel.getValueAt(i, 1).toString();
-                    if(keyName.trim().isEmpty() || keyValue.trim().isEmpty()) {
-                        tableModel.removeRow(i);
-                        --i;
-                        continue;
-                    }
-                    localMap.put(keyName, keyValue);
-                }
-                saveLocaleMap(localMap);
-            }
-        });
-        btnCancel.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                btnSave.setEnabled(false);
-                btnCancel.setEnabled(false);
-                showLocaleMap();
-            }
-        });
-        btnRemove.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                btnRemove.setEnabled(false);
-                int[] rows = jtLocaleMap.getSelectedRows();
-                DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
-                int rCount = 0;
-                for (int rowIndex : rows) {
-                    tableModel.removeRow(rowIndex-rCount);
-                    ++rCount;
-                }
-                jtLocaleMap.updateUI();
-                if(rCount > 0) {
-                    btnSave.setEnabled(true);
-                    btnCancel.setEnabled(true);
-                    btnDef.setEnabled(true);
-                }
-            }
-        });
-
-        btnAdd.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
-                int rowCount = jtLocaleMap.getRowCount();
-                tableModel.insertRow(rowCount, new String[]{"", ""});
-                jtLocaleMap.getSelectionModel().setSelectionInterval(rowCount , rowCount);
-                Rectangle rect = jtLocaleMap.getCellRect(rowCount ,  0 ,  true );
-                jtLocaleMap.scrollRectToVisible(rect);
-                jtLocaleMap.editCellAt(rowCount, 0);
-                jtLocaleMap.getEditorComponent().requestFocus();
-                btnSave.setEnabled(true);
-                btnCancel.setEnabled(true);
-                btnRemove.setEnabled(true);
-                btnDef.setEnabled(true);
-            }
-        });
-        localeMapDlg.add(opTablePanel, BorderLayout.NORTH);
-
-        jtLocaleMap.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                super.mouseReleased(e);
-                btnRemove.setEnabled(jtLocaleMap.getSelectedRows().length > 0);
-            }
-        });
-    }
-
-    private void saveLocaleMap(HashMap<String, String> localMap) {
-        ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
-        Properties properties = new Properties();
-        properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, config.getLocalMapFilePath());
-        configRepository.storage(localMap, properties);
     }
 
     @Override
@@ -567,5 +416,173 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
     @Override
     public void itemStateChanged(ItemEvent e) {
         enableConfirmButtons(true, true);
+    }
+
+    class LocaleMapDiaDlg extends JDialog {
+
+        private JButton btnDef;
+        private JButton btnSave;
+        private JButton btnCancel;
+        private JButton btnRemove;
+        private JButton btnAdd;
+
+        public LocaleMapDiaDlg(UI ui, boolean modal) {
+            super(ui, modal);
+        }
+
+        public void showLocaleMap() {
+            DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+            HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+            Set<String> keys = localMap.keySet();
+            tableModel.setRowCount(keys.size());
+            tableModel.setColumnCount(2);
+            int index = 0;
+            for (String key : keys) {
+                tableModel.setValueAt(key, index, 0);
+                tableModel.setValueAt(localMap.get(key), index, 1);
+                ++index;
+            }
+
+            btnSave.setEnabled(false);
+            btnCancel.setEnabled(false);
+            btnRemove.setEnabled(false);
+        }
+
+        public void initLocaleMapDlg() {
+            localeMapDlg.setSize(500, 600);
+            localeMapDlg.setLocationRelativeTo(null);
+            localeMapDlg.setLayout(new BorderLayout(5, 5));
+            jtLocaleMap = new ZebraStripeJTable(new Object[][]{}, new Object[]{"Locale Name", "Locale Value"});
+
+            localeMapDlg.add(new JScrollPane(jtLocaleMap), BorderLayout.CENTER);
+
+            btnDef = new JButton("Default");
+            btnSave = new JButton("Save");
+            btnCancel = new JButton("Cancel");
+            btnRemove = new JButton("Remove");
+            btnAdd = new JButton("Add New");
+            JPanel opTablePanel = new JPanel();
+            opTablePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 10));
+            opTablePanel.setLayout(new BoxLayout(opTablePanel, BoxLayout.LINE_AXIS));
+            opTablePanel.add(Box.createHorizontalGlue());
+            opTablePanel.add(btnSave);
+            opTablePanel.add(Box.createHorizontalStrut(15));
+            opTablePanel.add(btnCancel);
+            opTablePanel.add(Box.createHorizontalStrut(15));
+            opTablePanel.add(btnRemove);
+            opTablePanel.add(Box.createHorizontalStrut(15));
+            opTablePanel.add(btnAdd);
+            opTablePanel.add(Box.createHorizontalStrut(15));
+            opTablePanel.add(btnDef);
+            opTablePanel.add(Box.createHorizontalStrut(15));
+
+            btnDef.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    int opt = JOptionPane.showConfirmDialog(localeMapDlg, "Are you sure you want to restore the default locale map?", "prompt", JOptionPane.YES_NO_OPTION);
+                    if(JOptionPane.YES_OPTION != opt) {
+                        return;
+                    }
+                    btnDef.setEnabled(false);
+                    try {
+                        HashMap<String, String> newLocaleMap = AdditAssist.loadLocalMap(config.getLocalMapFilePath(), true);
+                        HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+                        localMap.clear();
+                        localMap.putAll(newLocaleMap);
+                        showLocaleMap();
+                    } catch (IOException e1) {
+                        btnDef.setEnabled(true);
+                        LoggerUtil.error(e1.getMessage());
+                        JOptionPane.showMessageDialog(localeMapDlg, "set to default failed.", "error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            });
+
+            btnSave.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    btnSave.setEnabled(false);
+                    btnCancel.setEnabled(false);
+                    DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+                    HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+                    localMap.clear();
+                    for (int i=0; i<tableModel.getRowCount(); ++i) {
+                        String keyName = tableModel.getValueAt(i, 0).toString();
+                        String keyValue = tableModel.getValueAt(i, 1).toString();
+                        if(keyName.trim().isEmpty() || keyValue.trim().isEmpty()) {
+                            tableModel.removeRow(i);
+                            --i;
+                            continue;
+                        }
+                        localMap.put(keyName, keyValue);
+                    }
+                    saveLocaleMap(localMap);
+                }
+            });
+            btnCancel.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    showLocaleMap();
+                }
+            });
+            btnRemove.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    btnRemove.setEnabled(false);
+                    int[] rows = jtLocaleMap.getSelectedRows();
+                    DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+                    int rCount = 0;
+                    for (int rowIndex : rows) {
+                        tableModel.removeRow(rowIndex-rCount);
+                        ++rCount;
+                    }
+                    jtLocaleMap.updateUI();
+                    if(rCount > 0) {
+                        btnSave.setEnabled(true);
+                        btnCancel.setEnabled(true);
+                        btnRemove.setEnabled(false);
+                        btnDef.setEnabled(true);
+                    }
+                }
+            });
+
+            btnAdd.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
+                    int rowCount = jtLocaleMap.getRowCount();
+                    tableModel.insertRow(rowCount, new String[]{"", ""});
+                    jtLocaleMap.getSelectionModel().setSelectionInterval(rowCount , rowCount);
+                    Rectangle rect = jtLocaleMap.getCellRect(rowCount ,  0 ,  true );
+                    jtLocaleMap.scrollRectToVisible(rect);
+                    jtLocaleMap.editCellAt(rowCount, 0);
+                    jtLocaleMap.getEditorComponent().requestFocus();
+                }
+            });
+            localeMapDlg.add(opTablePanel, BorderLayout.NORTH);
+
+            jtLocaleMap.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    btnRemove.setEnabled(jtLocaleMap.getSelectedRows().length > 0);
+                }
+            });
+            jtLocaleMap.getModel().addTableModelListener(new TableModelListener() {
+                @Override
+                public void tableChanged(TableModelEvent e) {
+                    btnSave.setEnabled(true);
+                    btnCancel.setEnabled(true);
+                    btnRemove.setEnabled(true);
+                    btnDef.setEnabled(true);
+                }
+            });
+        }
+
+        private void saveLocaleMap(HashMap<String, String> localMap) {
+            ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
+            Properties properties = new Properties();
+            properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, config.getLocalMapFilePath());
+            configRepository.storage(localMap, properties);
+        }
     }
 }

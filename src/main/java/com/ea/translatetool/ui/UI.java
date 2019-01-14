@@ -106,6 +106,8 @@ public class UI extends JFrame implements WorkCallback{
         workConfig.setExcelFiles(fileList);
         workConfig.setOutput(new File(outputTab.getOutPath()));
 
+        workConfig.setIgnoreLocaleSet(unableHandleTab.getIgnoreLocaleSet());
+
         new Thread(new Runnable() {
             @Override
             public void run() {

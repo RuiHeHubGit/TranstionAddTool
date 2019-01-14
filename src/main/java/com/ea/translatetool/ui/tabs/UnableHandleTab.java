@@ -8,6 +8,8 @@ import com.ea.translatetool.ui.component.ZebraStripeJTable;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.*;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class UnableHandleTab extends JPanel {
@@ -51,12 +53,26 @@ public class UnableHandleTab extends JPanel {
     private void initTableView() {
         setLayout(new BorderLayout(5, 5));
         springLayout = new SpringLayout();
-        jtTranslation = new ZebraStripeJTable(new Object[][]{}, new Object[]{"", "locale", "key", "translation", "path", "file", "test"});
+        jtTranslation = new ZebraStripeJTable(new Object[][]{}, new Object[]{"", "locale", "key", "translation", "path", "file"});
         jtTranslation.setColumnToCheckBox(0, true);
         jtTranslation.getColumnModel().getColumn(0).setMaxWidth(28);
         JScrollPane listScrollPage = new JScrollPane(jtTranslation);
         listScrollPage.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         listScrollPage.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         add(listScrollPage, BorderLayout.CENTER);
+    }
+
+    public Set<String> getIgnoreLocaleSet() {
+        Set<String> ignoreLocaleSet = new TreeSet<>();
+        if(jtTranslation == null) {
+            return ignoreLocaleSet;
+        }
+        int rowCount = jtTranslation.getRowCount();
+        for (int i=0; i<rowCount; ++i) {
+            if(!(boolean) jtTranslation.getValueAt(i, 0)) {
+                ignoreLocaleSet.add(jtTranslation.getValueAt(i, 1).toString());
+            }
+        }
+        return ignoreLocaleSet;
     }
 }
