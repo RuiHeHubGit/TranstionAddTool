@@ -61,12 +61,12 @@ public class AdditAssist {
         workConfig.setInput(files);
         workConfig.setOutput(new File(config.getOutPath()));
         workConfig.setOutType(GlobalConstant.OutType.TYPE_JSON);
-        HashMap<String, String> localMap;
+        TreeMap<String, String> localMap;
         try {
             localMap = loadLocalMap(config.getLocalMapFilePath(), false);
         } catch (IOException e) {
             LoggerUtil.error(e.getMessage());
-            localMap = new HashMap<>();
+            localMap = new TreeMap<>();
         }
         workConfig.setLocalMap(localMap);
         workConfig.setFilePrefix(config.getFilePrefix());
@@ -89,7 +89,7 @@ public class AdditAssist {
     }
 
 
-    public static HashMap<String, String> loadLocalMap(String localMapFilePath, boolean setToDef) throws IOException {
+    public static TreeMap<String, String> loadLocalMap(String localMapFilePath, boolean setToDef) throws IOException {
         File file = new File(localMapFilePath);
         if(setToDef || !file.exists() || file.isDirectory()) {
             if(file.isDirectory()) {
@@ -134,11 +134,11 @@ public class AdditAssist {
         ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
         Properties properties = new Properties();
         properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, localMapFilePath);
-        return configRepository.load(HashMap.class, null, properties);
+        return configRepository.load(TreeMap.class, null, properties);
     }
 
 
-    public static TranslationLocator calcTranslationLocator(List<List<String>> excelContent, HashMap<String, String> localMap, TranslationLocator locator) {
+    public static TranslationLocator calcTranslationLocator(List<List<String>> excelContent, TreeMap<String, String> localMap, TranslationLocator locator) {
 
         if(excelContent == null || excelContent.isEmpty()
                 || excelContent.size() < 3 && excelContent.get(0).size() < 3) {
@@ -243,7 +243,7 @@ public class AdditAssist {
         return locator;
     }
 
-    private static float calcSimilarLocalLevel(List<String> strings, HashMap<String, String> localMap) {
+    private static float calcSimilarLocalLevel(List<String> strings, TreeMap<String, String> localMap) {
         float count = 0;
         for (String s : strings) {
             if(localMap.containsKey(s)) {
@@ -349,7 +349,7 @@ public class AdditAssist {
         return locals;
     }
 
-    public static List<Translation> getTranslationList(String key, String local, String translateText, HashMap<String, String> localMap, File file) {
+    public static List<Translation> getTranslationList(String key, String local, String translateText, TreeMap<String, String> localMap, File file) {
         List<Translation> translations = new ArrayList<>();
         if(translateText.isEmpty()
                 || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()) {

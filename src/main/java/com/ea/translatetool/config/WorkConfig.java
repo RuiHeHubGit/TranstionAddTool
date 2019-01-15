@@ -18,7 +18,7 @@ public class WorkConfig {
     private File output;
     private GlobalConstant.OutType outType;
     private List<Translation> translationList;
-    private HashMap<String, String> localMap;
+    private TreeMap<String, String> localMap;
     private TreeMap<String, TranslationLocator> translationLocatorMap;
     private List<File> excelFiles;
     private Set<String> ignoreLocaleSet;
@@ -71,11 +71,11 @@ public class WorkConfig {
         this.translationList = translationList;
     }
 
-    public HashMap<String, String> getLocalMap() {
+    public TreeMap<String, String> getLocalMap() {
         return localMap;
     }
 
-    public void setLocalMap(HashMap<String, String> localMap) {
+    public void setLocalMap(TreeMap<String, String> localMap) {
         this.localMap = localMap;
     }
 

@@ -1,7 +1,8 @@
 package com.ea.translatetool.constant;
 
 public interface GlobalConstant {
-    String[] NEED_UI_START_PRO = {"explorer.exe", "idea.+\\.exe", "eclipse.+\\.exe"};
+    String[] NEED_UI_START_PRO = {"^(?!cmd)[\\w\\d]+\\.exe"};
+    String[] NEED_HIDE_PRO = {"^(?!idea|eclipse)[\\w\\d]+\\.exe"};
     String CONFIG_FILE_PATH = "config/toolConfig.properties";
     String DEF_LOCAL_MAP_FILE_NAME = "localMap.properties";
 

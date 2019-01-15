@@ -22,6 +22,7 @@ import com.ea.translatetool.util.PID;
 import com.ea.translatetool.util.ShutdownHandler;
 import com.ea.translatetool.util.WindowTool;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.table.TableModel;
 import java.awt.*;
@@ -29,6 +30,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -129,7 +131,7 @@ public class UI extends JFrame implements WorkCallback{
     }
 
     private static void init(App app) {
-        if(PID.isStartWithContain("cmd.exe")) {
+        if(PID.isStartWithContain(GlobalConstant.NEED_HIDE_PRO)) {
             WindowTool windowTool = WindowTool.getInstance();
             windowTool.setWindowText(windowTool.getCmdHwnd(), "translate tool cmd");
             windowTool.enableSystemMenu(WindowTool.SC_CLOSE, false);
@@ -221,7 +223,12 @@ public class UI extends JFrame implements WorkCallback{
     private void initWindow() {
         initTheme();
         setTitle("translate tool");
-        setIconImage(this.getToolkit().getImage(getClass().getClassLoader().getResource("tools_72px.ico")));
+        try {
+            BufferedImage image = ImageIO.read(UI.class.getClassLoader().getResourceAsStream(("tools_72px.png")));
+            setIconImage(image);
+        } catch (IOException e) {
+            LoggerUtil.error(e.getMessage());
+        }
         setSize(1000, 700);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);

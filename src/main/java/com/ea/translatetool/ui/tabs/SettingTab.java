@@ -90,7 +90,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
         settingPanel.add(createSingleJFileChooserPanel("Local Map Path", tfLocalMapPath, "select", JFileChooser.FILES_ONLY));
         settingPanel.add(createSingleJFileChooserPanel("Exist Key Save Dir", tfExistKeySaveDir, "select", JFileChooser.DIRECTORIES_ONLY));
         settingPanel.add(createSingleJFileChooserPanel("Log Save Dir", tfLogSaveDir, "select", JFileChooser.DIRECTORIES_ONLY));
-        settingPanel.add(createSingleJFileChooserPanel("Out Path", jfOutPath, "select", JFileChooser.DIRECTORIES_ONLY));
+        settingPanel.add(createSingleJFileChooserPanel("Default Out Path", jfOutPath, "select", JFileChooser.DIRECTORIES_ONLY));
 
         settingPanel.add(Box.createVerticalStrut(10));
         JPanel fixPanel = new JPanel(new GridLayout(1, 2));
@@ -129,6 +129,12 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
                 inPaths.add(path);
             }
         }
+        jtInPath.getModel().addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                enableConfirmButtons(true, true);
+            }
+        });
         updateInPathListTable();
         enableConfirmButtons(false, true);
     }
@@ -212,7 +218,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
         tablePanel.add(jtInPath, BorderLayout.CENTER);
 
         JPanel InPathPanel = new JPanel(new BorderLayout(5, 5));
-        InPathPanel.add(new JLabel("In Path"), BorderLayout.NORTH);
+        InPathPanel.add(new JLabel("Default In Path"), BorderLayout.NORTH);
         InPathPanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 5));
         InPathPanel.add(tablePanel);
         return InPathPanel;
@@ -432,7 +438,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
 
         public void showLocaleMap() {
             DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
-            HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+            TreeMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
             Set<String> keys = localMap.keySet();
             tableModel.setRowCount(keys.size());
             tableModel.setColumnCount(2);
@@ -485,8 +491,8 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
                     }
                     btnDef.setEnabled(false);
                     try {
-                        HashMap<String, String> newLocaleMap = AdditAssist.loadLocalMap(config.getLocalMapFilePath(), true);
-                        HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+                        TreeMap<String, String> newLocaleMap = AdditAssist.loadLocalMap(config.getLocalMapFilePath(), true);
+                        TreeMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
                         localMap.clear();
                         localMap.putAll(newLocaleMap);
                         showLocaleMap();
@@ -504,7 +510,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
                     btnSave.setEnabled(false);
                     btnCancel.setEnabled(false);
                     DefaultTableModel tableModel = (DefaultTableModel) jtLocaleMap.getModel();
-                    HashMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
+                    TreeMap<String, String> localMap = ui.getWorkConfig().getLocalMap();
                     localMap.clear();
                     for (int i=0; i<tableModel.getRowCount(); ++i) {
                         String keyName = tableModel.getValueAt(i, 0).toString();
@@ -578,7 +584,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
             });
         }
 
-        private void saveLocaleMap(HashMap<String, String> localMap) {
+        private void saveLocaleMap(TreeMap<String, String> localMap) {
             ConfigRepository configRepository = FileConfigRepositoryImpl.getInstance();
             Properties properties = new Properties();
             properties.put(FileConfigRepositoryImpl.CONFIG_FILE_PATH_KEY, config.getLocalMapFilePath());

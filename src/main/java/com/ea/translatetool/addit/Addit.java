@@ -354,7 +354,7 @@ public class Addit {
             callback.onProgress(excelFiles.size(), excelFiles.size(), "");
         }
 
-        HashMap<String, String> localMap = workConfig.getLocalMap();
+        TreeMap<String, String> localMap = workConfig.getLocalMap();
         Set<String> ignoreLocaleSet = workConfig.getIgnoreLocaleSet();
         for (Translation translation : workConfig.getTranslationList()) {
             if(!localMap.containsKey(translation.getLocaleKey())
@@ -375,7 +375,7 @@ public class Addit {
 
     private static void loadTranslateFromFile(WorkConfig workConfig, File file) throws IOException, InvalidExcelContentException {
         TranslationLocator translationLocator = workConfig.getTranslationLocatorMap().get(file.getAbsolutePath());
-        HashMap<String, String> localMap = workConfig.getLocalMap();
+        TreeMap<String, String> localMap = workConfig.getLocalMap();
         if(translationLocator == null) {
             translationLocator = AdditAssist.calcTranslationLocator(ExcelUtil.getExcelString(ExcelUtil.getWorkbook(file), 0, 0, 0),
                     localMap, null);

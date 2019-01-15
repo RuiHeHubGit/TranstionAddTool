@@ -12,7 +12,8 @@ public class AppConfig {
     private String outPath;
     private String filePrefix;
     private String fileSuffix;
-    private boolean isCoverKey;
+    private boolean coverKey;
+    private boolean debug;
 
     public String getLocalMapFilePath() {
         return localMapFilePath;
@@ -79,10 +80,18 @@ public class AppConfig {
     }
 
     public boolean isCoverKey() {
-        return isCoverKey;
+        return coverKey;
     }
 
     public void setCoverKey(boolean coverKey) {
-        this.isCoverKey = coverKey;
+        this.coverKey = coverKey;
+    }
+
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
     }
 }

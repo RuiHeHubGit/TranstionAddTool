@@ -64,6 +64,8 @@ public class App {
             LoggerUtil.error(e.getMessage());
         }
         appConfig.setLogLevel(LoggerUtil.setLogLevel(appConfig.getLogLevel()));
+        LoggerUtil.setDebug(appConfig.isDebug());
+        LoggerUtil.setLogPath(appConfig.getLogSaveDir());
     }
 
     public static AppConfig createDefAppConfig() {
