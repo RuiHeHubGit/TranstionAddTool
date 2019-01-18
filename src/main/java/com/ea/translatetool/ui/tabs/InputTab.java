@@ -179,18 +179,17 @@ public class InputTab extends JPanel implements ActionListener {
                     if (locator.getTranslationLocator() != null) {
                         dataModel.setValueAt(locator.getTranslationLocator(), i, 5);
                     }
+                    jTable.setRowTextColor(i, Color.BLACK);
                 } else {
                     jTable.setRowTextColor(i, Color.RED);
                 }
             }
             jTable.setModel(dataModel);
 
-            final JTable finalJTable = jTable;
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    // TODO Auto-generated method stub
-                    finalJTable.updateUI();
+                    contentPanel.updateUI();
                 }
             });
 
