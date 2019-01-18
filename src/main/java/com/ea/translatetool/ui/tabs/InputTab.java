@@ -122,20 +122,21 @@ public class InputTab extends JPanel implements ActionListener {
                 JPanel panel = new JPanel(panelLayout);
                 contentPanel.add(panel);
                 panel.add(new JLabel(" " + key));
-                jTable = new ZebraStripeJTable();
+                jTable = new ZebraStripeJTable(new Object[][]{}, new Object[]{"", "File Name", "Key Locator", "Locale Translation Orientation", "Locale Locator", "Translation Locator"});
                 jTable.setCheckBoxWidth(28);
                 jTable.setColumnToCheckBox(0, true);
                 jTable.setColumnToComboBox(3, new String[]{"horizontal","vertical"});
-                panel.add(jTable);
-                panelLayout.putConstraint(SpringLayout.NORTH, jTable, 20, SpringLayout.NORTH, panel);
-                panelLayout.putConstraint(SpringLayout.WEST, jTable, 0, SpringLayout.WEST, panel);
-                panelLayout.putConstraint(SpringLayout.EAST, jTable, 0, SpringLayout.EAST, panel);
-                panelLayout.getConstraints(panel).setHeight(Spring.sum(panelLayout.getConstraints(jTable).getHeight(), Spring.constant(20)));
+                JScrollPane jScrollPane = new JScrollPane(jTable);
+                panel.add(jScrollPane);
+                SpringLayout.Constraints panelCons = springLayout.getConstraints(panel);
+                panelLayout.putConstraint(SpringLayout.NORTH, jScrollPane, 20, SpringLayout.NORTH, panel);
+                panelLayout.putConstraint(SpringLayout.WEST, jScrollPane, 0, SpringLayout.WEST, panel);
+                panelLayout.putConstraint(SpringLayout.EAST, jScrollPane, 0, SpringLayout.EAST, panel);
+                panelCons.setHeight(Spring.sum(panelLayout.getConstraints(jTable).getHeight(), Spring.constant(50)));
                 tableViewMap.put(key, jTable);
 
                 springLayout.putConstraint(SpringLayout.WEST, panel, -2, SpringLayout.WEST, contentPanel);
                 springLayout.putConstraint(SpringLayout.EAST, panel, 2, SpringLayout.EAST, contentPanel);
-                SpringLayout.Constraints panelCons = springLayout.getConstraints(panel);
                 if (contentPanelHeight == null) {
                     fileNameMaxLen = 0;
                     contentPanelHeight = Spring.constant(0);
@@ -143,7 +144,6 @@ public class InputTab extends JPanel implements ActionListener {
                     panelCons.setY(Spring.sum(contentPanelHeight, Spring.constant(10)));
                 }
                 contentPanelHeight = Spring.sum(contentPanelHeight, panelCons.getHeight());
-                contentPanelHeight = Spring.sum(contentPanelHeight, Spring.constant(10));
                 springLayout.getConstraints(contentPanel).setHeight(contentPanelHeight);
             }
 
@@ -179,6 +179,8 @@ public class InputTab extends JPanel implements ActionListener {
                     if (locator.getTranslationLocator() != null) {
                         dataModel.setValueAt(locator.getTranslationLocator(), i, 5);
                     }
+                } else {
+                    jTable.setRowTextColor(i, Color.RED);
                 }
             }
             jTable.setModel(dataModel);

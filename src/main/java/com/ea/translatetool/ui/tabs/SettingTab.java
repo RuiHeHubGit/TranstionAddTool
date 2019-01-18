@@ -152,6 +152,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
                 for (int i=0; i<tableModel.getRowCount(); ++i) {
                     if((Boolean) tableModel.getValueAt(i, 1)) {
                         tableModel.removeRow(i);
+                        inPaths.remove(i);
                         --i;
                         isChange = true;
                     }
@@ -168,6 +169,7 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
                 boolean isChange = jtInPath.getRowCount() > 0;
                 ((DefaultTableModel)jtInPath.getModel()).setRowCount(0);
                 if(isChange) {
+                    inPaths.clear();
                     jtInPath.updateUI();
                     enableConfirmButtons(true, true);
                 }
@@ -248,8 +250,9 @@ public class SettingTab extends JPanel implements ActionListener,ItemListener{
 
             boolean needUpdate = false;
             for (File file : files) {
-                if(!inPaths.contains(file)) {
-                    inPaths.add(file.getAbsolutePath());
+                String path = file.getAbsolutePath();
+                if(!inPaths.contains(path)) {
+                    inPaths.add(path);
                     needUpdate = true;
                 }
             }

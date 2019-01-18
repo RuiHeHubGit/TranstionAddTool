@@ -355,11 +355,16 @@ public class Addit {
         }
 
         TreeMap<String, String> localMap = workConfig.getLocalMap();
+        List<Translation> translationList = workConfig.getTranslationList();
         Set<String> ignoreLocaleSet = workConfig.getIgnoreLocaleSet();
-        for (Translation translation : workConfig.getTranslationList()) {
-            if(!localMap.containsKey(translation.getLocaleKey())
-                    && (ignoreLocaleSet == null || !ignoreLocaleSet.contains(translation.getLocaleKey()))) {
-                noFoundLocaleList.add(translation);
+        for (int i=0; i<translationList.size(); ++i) {
+            Translation translation = translationList.get(i);
+            if(!localMap.containsKey(translation.getLocaleKey())) {
+                if(ignoreLocaleSet != null && ignoreLocaleSet.contains(translation.getLocaleKey())) {
+                    translationList.remove(i);
+                } else {
+                    noFoundLocaleList.add(translation);
+                }
             }
         }
         if(!noFoundLocaleList.isEmpty()) {
@@ -415,18 +420,20 @@ public class Addit {
                 }
             } else {
                 List<String> locals = AdditAssist.getTranslationLocals(excelContent, translationLocator);
-                for (int i=0; i<keys.size(); ++i) {
-                    for (int j=0; j<locals.size(); ++j) {
+                for (int i=1; i<keys.size(); ++i) {
+                    System.out.println(i);
+                    if(translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()
+                            && AdditAssist.calcFirstCharAverageDeviation(excelContent.get(i)) < 2000
+                            || translationLocator.getOrientation() == GlobalConstant.Orientation.VERTICAL.ordinal()
+                            && AdditAssist.calcFirstCharAverageDeviation(AdditAssist.getTableColumnTexts(excelContent, i)) < 2000) {
+                        continue;
+                    }
+
+                    for (int j=1; j<locals.size(); ++j) {
                         List<Translation> translations;
                         if(translationLocator.getOrientation() == GlobalConstant.Orientation.HORIZONTAL.ordinal()) {
-                            if(AdditAssist.calcListNotSimilarLevel(excelContent.get(i)) < 0.5) {
-                                break;
-                            }
                             translations = AdditAssist.getTranslationList(keys.get(i), locals.get(j), excelContent.get(i).get(j), localMap, file);
                         } else {
-                            if(AdditAssist.calcListNotSimilarLevel(AdditAssist.getTableColumnTexts(excelContent, i)) < 0.5) {
-                                break;
-                            }
                             translations = AdditAssist.getTranslationList(keys.get(i), locals.get(j), excelContent.get(j).get(i), localMap, file);
                         }
                         if(translations != null) {

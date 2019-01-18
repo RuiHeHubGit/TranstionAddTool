@@ -157,8 +157,9 @@ public class AdditAssist {
         Integer translationLocator = null;
         Integer orientation = GlobalConstant.Orientation.HORIZONTAL.ordinal();
 
-        float maxKeySameLv = 0.5f, maxLocalSameLv = 0.5f, maxTranslationSameLv = 0.5f;
-        float keySameLv, localSameLv, translationSameLv;
+        float maxKeySameLv = 0.5f, maxLocalSameLv = 0.5f;
+        float keySameLv, localSameLv;
+        double cad, maxCad = 0;
 
         for (int i = 0; i < columns && i < 3; ++i) {
             keySameLv = calcSimilarLevel(getTableColumnTexts(excelContent, i), GlobalConstant.REGEX_KEY);
@@ -207,9 +208,9 @@ public class AdditAssist {
                 if(i == num || i == localLocator) {
                     continue;
                 }
-                translationSameLv = calcListNotSimilarLevel(getTableColumnTexts(excelContent, i));
-                if(translationSameLv > maxTranslationSameLv) {
-                    maxTranslationSameLv = translationSameLv;
+                cad = calcFirstCharAverageDeviation(getTableColumnTexts(excelContent, i));
+                if(cad > maxCad) {
+                    maxCad = cad;
                     translationLocator = i;
                 }
             }
@@ -221,9 +222,9 @@ public class AdditAssist {
                 if(i == num || i == localLocator) {
                     continue;
                 }
-                translationSameLv = calcListNotSimilarLevel(excelContent.get(i));
-                if(translationSameLv > maxTranslationSameLv) {
-                    maxTranslationSameLv = translationSameLv;
+                cad = calcFirstCharAverageDeviation(excelContent.get(i));
+                if(cad > maxCad) {
+                    maxCad = cad;
                     translationLocator = i;
                 }
             }
@@ -285,24 +286,25 @@ public class AdditAssist {
         return false;
     }
 
-    public static float calcListNotSimilarLevel(List<String> strings) {
-        int count = 0;
-        if(strings == null || strings.size() < 2) return 1;
-
-        int right = strings.size()-1;
-        String strSource;
-        String strCompared;
-        for (int i=0; i<right; ++i) {
-            strSource = strings.get(i);
-            strCompared = strings.get(i+1);
-            if(strSource.isEmpty() || strCompared.isEmpty()) {
-                continue;
-            }
-            if(!StringUtil.isSimilar(strSource, strCompared, 10, strSource.length())) {
-                ++count;
+    public static double calcFirstCharAverageDeviation(List<String> strings) {
+        TreeSet<Character> chars = new TreeSet<>();
+        if(strings == null) return 0;
+        for (String string : strings) {
+            if(string.length() > 1) {
+                chars.add(string.charAt(1));
+                if(chars.size() > 30) break;
             }
         }
-        return 1.0f * count / strings.size();
+        double sum = 0;
+        for (Character c : chars) {
+            sum += c;
+        }
+        double avg = sum / chars.size();
+        double d = 0;
+        for (Character c : chars) {
+            d += Math.pow(c-avg, 2);
+        }
+        return Math.sqrt(d/chars.size());
     }
 
     public static float calcSimilarLevel(List<String> strings, String regex) {
@@ -352,6 +354,7 @@ public class AdditAssist {
     public static List<Translation> getTranslationList(String key, String local, String translateText, TreeMap<String, String> localMap, File file) {
         List<Translation> translations = new ArrayList<>();
         if(translateText.isEmpty()
+                || local.isEmpty()
                 || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()) {
             return translations;
         }

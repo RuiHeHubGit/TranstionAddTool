@@ -14,6 +14,7 @@ public class ZebraStripeJTable extends JTable {
     private JComboBoxTableCellRenderer jComboBoxTableCellRenderer;
     private DefaultTableCellRenderer tcr;
     private HashMap<Integer, Object> jBoxMap;
+    private HashMap<Integer, Color> rowColorMap;
     private int checkBoxWidth;
 
     public ZebraStripeJTable(TableModel dataModel) {
@@ -32,6 +33,7 @@ public class ZebraStripeJTable extends JTable {
     private void init() {
         checkBoxWidth = 30;
         jBoxMap = new HashMap<>();
+        rowColorMap = new HashMap<>();
         setRowHeight(20);
         getTableHeader().setReorderingAllowed(false);
         tcr = new DefaultTableCellRenderer(){
@@ -41,15 +43,18 @@ public class ZebraStripeJTable extends JTable {
                     setBackground(Color.WHITE);//设置奇数行底色
                 else if(row%2 == 1)
                     setBackground(new Color(220,230,241));//设置偶数行底色
+                Color textColor = rowColorMap.get(row);
+                if(textColor != null) {
+                    setForeground(textColor);
+                } else {
+                    setForeground(Color.BLACK);
+                }
                 return super.getTableCellRendererComponent(table, value,isSelected, hasFocus, row, column);
             }
         };
     }
 
     public void setColumnToCheckBox(int index, boolean selected) {
-        if(jBoxMap == null) {
-            jBoxMap = new HashMap<>();
-        }
         if(jCheckBoxTableCellRenderer == null) {
             jCheckBoxTableCellRenderer = new JCheckBoxTableCellRenderer();
         }
@@ -117,6 +122,10 @@ public class ZebraStripeJTable extends JTable {
         return jCheckBox;
     }
 
+    public void setRowTextColor(int rowIndex, Color color) {
+        rowColorMap.put(rowIndex, color);
+    }
+
     class JCheckBoxEditor extends DefaultCellEditor {
 
         public JCheckBoxEditor(boolean checked) {
@@ -134,6 +143,9 @@ public class ZebraStripeJTable extends JTable {
     class JCheckBoxTableCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            if(value == null) {
+                value = jBoxMap.get(column);
+            }
             return createJCheckBox((Boolean) value);
         }
     }
