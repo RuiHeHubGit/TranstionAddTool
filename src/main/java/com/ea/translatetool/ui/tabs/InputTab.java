@@ -75,7 +75,7 @@ public class InputTab extends JPanel implements ActionListener {
                     timer.cancel();
                 }
             }
-        }, 200, 200);
+        }, 200, 500);
         Object result = Addit.doWork(workConfig, Addit.WORK_SCAN_FILE, Addit.WORK_SCAN_FILE, ui);
         if(result == null) {
             return;
@@ -129,7 +129,7 @@ public class InputTab extends JPanel implements ActionListener {
                 JScrollPane jScrollPane = new JScrollPane(jTable);
                 panel.add(jScrollPane);
                 SpringLayout.Constraints panelCons = springLayout.getConstraints(panel);
-                panelLayout.putConstraint(SpringLayout.NORTH, jScrollPane, 20, SpringLayout.NORTH, panel);
+                panelLayout.putConstraint(SpringLayout.NORTH, jScrollPane, 18, SpringLayout.NORTH, panel);
                 panelLayout.putConstraint(SpringLayout.WEST, jScrollPane, 0, SpringLayout.WEST, panel);
                 panelLayout.putConstraint(SpringLayout.EAST, jScrollPane, 0, SpringLayout.EAST, panel);
                 panelCons.setHeight(Spring.sum(panelLayout.getConstraints(jTable).getHeight(), Spring.constant(50)));
@@ -141,7 +141,7 @@ public class InputTab extends JPanel implements ActionListener {
                     fileNameMaxLen = 0;
                     contentPanelHeight = Spring.constant(0);
                 } else {
-                    panelCons.setY(Spring.sum(contentPanelHeight, Spring.constant(10)));
+                    panelCons.setY(contentPanelHeight);
                 }
                 contentPanelHeight = Spring.sum(contentPanelHeight, panelCons.getHeight());
                 springLayout.getConstraints(contentPanel).setHeight(contentPanelHeight);

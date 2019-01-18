@@ -191,9 +191,11 @@ public class Addit {
                 notSaveTranslationList.add(translation);
             }
         }
-        if(lines.get(lines.size()-2).endsWith(",")) {
-            String line = lines.get(lines.size()-2);
-            lines.set(lines.size()-2, line.substring(0, line.length()-1));
+        if(outType == GlobalConstant.OutType.TYPE_JSON) {
+            if (lines.get(lines.size() - 2).endsWith(",")) {
+                String line = lines.get(lines.size() - 2);
+                lines.set(lines.size() - 2, line.substring(0, line.length() - 1));
+            }
         }
         IOUtil.saveLinesToFile(lines, localFile, null);
         return notSaveTranslationList;
