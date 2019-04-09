@@ -95,8 +95,8 @@ public class UI extends JFrame implements WorkCallback{
                     if(ori != null) {
                         locator.setOrientation(GlobalConstant.Orientation.valueOf(ori.toUpperCase()).ordinal());
                     }
-                    locator.setLocalLocator((Integer) tableModel.getValueAt(i, 4));
-                    locator.setTranslationLocator((Integer) tableModel.getValueAt(i, 5));
+                    locator.setLocalLocator(Integer.valueOf(tableModel.getValueAt(i, 4).toString()));
+                    locator.setTranslationLocator(Integer.valueOf(tableModel.getValueAt(i, 5).toString()));
                 }
             }
         }

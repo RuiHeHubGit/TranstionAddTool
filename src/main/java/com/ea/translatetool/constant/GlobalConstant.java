@@ -6,7 +6,7 @@ public interface GlobalConstant {
     String CONFIG_FILE_PATH = "config/toolConfig.properties";
     String DEF_LOCAL_MAP_FILE_NAME = "localMap.properties";
 
-    String REGEX_KEY = "[a-z_.\\d]{10,60}";
+    String REGEX_KEY = "[a-zA-Z_.\\d]{10,60}";
     String REGEX_LOCAL = "([a-zA-Z]{2,8}_[a-zA-Z]{2,8})";
 
     interface AppConfigDefaultValue {

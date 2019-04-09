@@ -355,7 +355,7 @@ public class AdditAssist {
         List<Translation> translations = new ArrayList<>();
         if(translateText.isEmpty()
                 || local.isEmpty()
-                || !Pattern.compile(GlobalConstant.REGEX_KEY).matcher(key).matches()) {
+                || key.isEmpty()) {
             return translations;
         }
 
