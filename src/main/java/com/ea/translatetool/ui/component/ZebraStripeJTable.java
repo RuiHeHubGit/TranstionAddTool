@@ -3,8 +3,11 @@ package com.ea.translatetool.ui.component;
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ZebraStripeJTable extends JTable {
@@ -16,6 +19,25 @@ public class ZebraStripeJTable extends JTable {
     private HashMap<Integer, Object> jBoxMap;
     private HashMap<Integer, Color> rowColorMap;
     private int checkBoxWidth;
+    private java.util.List<ChackdeAllChangeListener> listeners;
+
+    public synchronized void addCheckedChangeListener(ChackdeAllChangeListener chackdeAllChangeListener) {
+        if(listeners == null) {
+            listeners = new ArrayList<>();
+        }
+        listeners.add(chackdeAllChangeListener);
+    }
+
+    public synchronized void removeCheckedChangeListener(ChackdeAllChangeListener chackdeAllChangeListener) {
+        if(listeners == null) {
+            return;
+        }
+        listeners.remove(chackdeAllChangeListener);
+    }
+
+    public interface ChackdeAllChangeListener {
+        void onChange(AWTEvent e, boolean selectAll);
+    }
 
     public ZebraStripeJTable(TableModel dataModel) {
         super(dataModel);
@@ -36,46 +58,47 @@ public class ZebraStripeJTable extends JTable {
         rowColorMap = new HashMap<>();
         setRowHeight(20);
         getTableHeader().setReorderingAllowed(false);
-        tcr = new DefaultTableCellRenderer(){
+        tcr = new DefaultTableCellRenderer() {
             private static final long serialVersionUID = 1L;
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column){
-                if(row%2 == 0)
+
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                if (row % 2 == 0)
                     setBackground(Color.WHITE);//设置奇数行底色
-                else if(row%2 == 1)
-                    setBackground(new Color(220,230,241));//设置偶数行底色
+                else if (row % 2 == 1)
+                    setBackground(new Color(220, 230, 241));//设置偶数行底色
                 Color textColor = rowColorMap.get(row);
-                if(textColor != null) {
+                if (textColor != null) {
                     setForeground(textColor);
                 } else {
                     setForeground(Color.BLACK);
                 }
-                return super.getTableCellRendererComponent(table, value,isSelected, hasFocus, row, column);
+                return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             }
         };
     }
 
     public void setColumnToCheckBox(int index, boolean selected) {
-        if(jCheckBoxTableCellRenderer == null) {
+        if (jCheckBoxTableCellRenderer == null) {
             jCheckBoxTableCellRenderer = new JCheckBoxTableCellRenderer();
         }
-        if(jCheckBoxEditor == null) {
+        if (jCheckBoxEditor == null) {
             jCheckBoxEditor = new JCheckBoxEditor(selected);
         }
         jBoxMap.put(index, selected);
     }
 
     public void setColumnToComboBox(int index, String[] items) {
-        if(jComboBoxTableCellRenderer == null) {
+        if (jComboBoxTableCellRenderer == null) {
             jComboBoxTableCellRenderer = new JComboBoxTableCellRenderer();
         }
-        if(jComboBoxEditor == null) {
+        if (jComboBoxEditor == null) {
             jComboBoxEditor = new JComboBoxEditor(items);
         }
         jBoxMap.put(index, items);
     }
 
     public void cancelColumnToBox(int index) {
-        if(jBoxMap == null) {
+        if (jBoxMap == null) {
             return;
         }
         jBoxMap.remove(index);
@@ -93,9 +116,9 @@ public class ZebraStripeJTable extends JTable {
     @Override
     public TableCellEditor getCellEditor(int row, int column) {
         Object boxMode = jBoxMap.get(column);
-        if(boxMode instanceof Boolean) {
+        if (boxMode instanceof Boolean) {
             return jCheckBoxEditor;
-        } else if(boxMode instanceof String[]) {
+        } else if (boxMode instanceof String[]) {
             return jComboBoxEditor;
         }
         return super.getCellEditor(row, column);
@@ -104,7 +127,7 @@ public class ZebraStripeJTable extends JTable {
     @Override
     public TableCellRenderer getCellRenderer(int row, int column) {
         Object boxMode = jBoxMap.get(column);
-        if(boxMode instanceof Boolean) {
+        if (boxMode instanceof Boolean) {
             TableColumn tableColumn = getColumnModel().getColumn(column);
             tableColumn.setMaxWidth(checkBoxWidth);
             tableColumn.setPreferredWidth(checkBoxWidth);
@@ -119,6 +142,32 @@ public class ZebraStripeJTable extends JTable {
     private JCheckBox createJCheckBox(boolean isSelected) {
         JCheckBox jCheckBox = new JCheckBox(null, null, isSelected);
         jCheckBox.setMargin(new Insets(0, 5, 0, 0));
+        jCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedColumn = ZebraStripeJTable.this.getSelectedColumn();
+                DefaultTableModel tableModel = (DefaultTableModel) ZebraStripeJTable.this.getModel();
+
+                boolean checkedAll = true;
+                for (int i = 0; i < tableModel.getRowCount(); ++i) {
+                    Boolean checked = (Boolean) tableModel.getValueAt(i, selectedColumn);
+                    if(!checked) {
+                        checkedAll = false;
+                        break;
+                    }
+                }
+
+                jBoxMap.put(selectedColumn, checkedAll);
+                tableHeader.invalidate();
+                tableHeader.repaint();
+
+                if(listeners != null) {
+                    for (ChackdeAllChangeListener listener : listeners) {
+                        listener.onChange(e, checkedAll);
+                    }
+                }
+            }
+        });
         return jCheckBox;
     }
 
@@ -143,7 +192,7 @@ public class ZebraStripeJTable extends JTable {
     class JCheckBoxTableCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            if(value == null) {
+            if (value == null) {
                 value = jBoxMap.get(column);
             }
             return createJCheckBox((Boolean) value);
@@ -162,29 +211,42 @@ public class ZebraStripeJTable extends JTable {
 
     class TableHeaderCheckBoxCellRenderer implements TableCellRenderer {
         private JCheckBox checkBox;
+
+        class TableHeaderBoxMouseListener extends MouseAdapter {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.isConsumed()) {
+                    return;
+                }
+                e.consume();
+                if (e.getClickCount() > 0) {
+                    int selectColumn = tableHeader.columnAtPoint(e.getPoint());
+                    if (jBoxMap.get(selectColumn) instanceof Boolean) {
+                        Boolean selected = (Boolean) jBoxMap.get(selectColumn);
+                        jBoxMap.put(selectColumn, !selected);
+                        DefaultTableModel tableModel = (DefaultTableModel) ZebraStripeJTable.this.getModel();
+                        for (int i = 0; i < tableModel.getRowCount(); ++i) {
+                            tableModel.setValueAt(!selected, i, selectColumn);
+                        }
+                        tableHeader.repaint();
+                    }
+                }
+            }
+        }
+
         public TableHeaderCheckBoxCellRenderer(int index) {
             tableHeader = ZebraStripeJTable.this.getTableHeader();
+            tableHeader.getComponents();
             checkBox = new JCheckBox();
             checkBox.setSelected((Boolean) jBoxMap.get(index));
 
-            tableHeader.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (e.getClickCount() > 0) {
-                        int selectColumn = tableHeader.columnAtPoint(e.getPoint());
-                        if (jBoxMap.get(selectColumn) instanceof Boolean) {
-                            Boolean selected = (Boolean) jBoxMap.get(selectColumn);
-                            jBoxMap.put(selectColumn, !selected);
-                            checkBox.setSelected(!selected);
-                            DefaultTableModel tableModel = (DefaultTableModel) ZebraStripeJTable.this.getModel();
-                            for (int i=0; i<tableModel.getRowCount(); ++i) {
-                                ZebraStripeJTable.this.setValueAt(!selected, i, selectColumn);
-                            }
-                            tableHeader.repaint();
-                        }
-                    }
+            for (Object o : tableHeader.getMouseListeners()) {
+                if(o instanceof TableHeaderBoxMouseListener) {
+                    return;
                 }
-            });
+            }
+
+            tableHeader.addMouseListener(new TableHeaderBoxMouseListener());
         }
 
         @Override
@@ -192,4 +254,5 @@ public class ZebraStripeJTable extends JTable {
             return checkBox;
         }
     }
+
 }

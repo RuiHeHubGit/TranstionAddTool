@@ -44,8 +44,7 @@ public class UnableHandleTab extends JPanel {
             tableModel.setValueAt(translation.getLocal(), row, 1);
             tableModel.setValueAt(translation.getKey(), row, 2);
             tableModel.setValueAt(translation.getTranslation(), row, 3);
-            tableModel.setValueAt(translation.getFile().getParent(), row, 4);
-            tableModel.setValueAt(translation.getFile().getName(), row, 5);
+            tableModel.setValueAt(translation.getFile().getAbsolutePath(), row, 4);
             ++row;
         }
     }
@@ -53,7 +52,7 @@ public class UnableHandleTab extends JPanel {
     private void initTableView() {
         setLayout(new BorderLayout(5, 5));
         springLayout = new SpringLayout();
-        jtTranslation = new ZebraStripeJTable(new Object[][]{}, new Object[]{"", "locale", "key", "translation", "path", "file"});
+        jtTranslation = new ZebraStripeJTable(new Object[][]{}, new Object[]{"", "locale", "key", "translation", "path"});
         jtTranslation.setColumnToCheckBox(0, true);
         jtTranslation.getColumnModel().getColumn(0).setMaxWidth(28);
         JScrollPane listScrollPage = new JScrollPane(jtTranslation);

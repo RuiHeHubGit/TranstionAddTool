@@ -87,15 +87,16 @@ public class CmdMode {
             @Override
             public boolean onError(Throwable t) {
                 if(t instanceof AlreadyExistKeyException) {
-                    if(app.getAppConfig().isCoverKey()) {
-                        return false;
-                    }
+                    java.util.List<Translation> translationList = ((AlreadyExistKeyException) t).getExistList();
                     try {
-                        AdditAssist.saveKeyExistTranslation(((AlreadyExistKeyException)t).getExistList(),
-                                AdditAssist.createExistKeySaveFile(app.getAppConfig()));
+                        File saveFile = AdditAssist.createExistKeySaveFile(app.getAppConfig());
+                        AdditAssist.saveKeyExistTranslation(translationList, saveFile);
+                        String.format("%d keys already exist and save in file %s",
+                                translationList.size(), saveFile.getAbsolutePath());
                     } catch (IOException e) {
                         LoggerUtil.error(e.getMessage());
                     }
+
                     return true;
                 } else {
                     LoggerUtil.exceptionLog(t);
@@ -136,6 +137,7 @@ public class CmdMode {
     // 定义命令行参数
     private void definedOptions() {
         opts = new Options();
+        Option optStartWithUI = new Option( "ui",  false,"Run translation tool as UI.");
         Option optHelp = new Option("h", "help", false,"Help of translation tool");
         Option optVersion = new Option("v", "version", false,"Look version for translation addi.");
         Option optVertical = new Option("vt", "vertical", false,"Set read vertical in excel");
@@ -154,6 +156,7 @@ public class CmdMode {
                         "                \"path is excel file path and exist,num1 is row or column of key,num2 is of locale,num3 is of translation,\" +\n" +
                         "                \"mean of v is vertical locale and translation,mean of h is horizontal locale and translation,example: l c0,1,2,v").build();
 
+        opts.addOption(optStartWithUI);
         opts.addOption(optHelp);
         opts.addOption(optVersion);
         opts.addOption(optVertical);

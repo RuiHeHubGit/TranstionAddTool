@@ -7,6 +7,7 @@ import com.ea.translatetool.addit.WorkCallback;
 import com.ea.translatetool.addit.exception.AlreadyExistKeyException;
 import com.ea.translatetool.addit.exception.InvalidExcelContentException;
 import com.ea.translatetool.addit.exception.NoFoundLocaleException;
+import com.ea.translatetool.addit.mode.Translation;
 import com.ea.translatetool.addit.mode.TranslationLocator;
 import com.ea.translatetool.addit.mode.WorkStage;
 import com.ea.translatetool.cmd.CmdMode;
@@ -37,7 +38,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
-public class UI extends JFrame implements WorkCallback{
+public class UI extends JFrame implements WorkCallback {
     private static UI ui;
     private final App app;
     private WorkConfig workConfig;
@@ -60,14 +61,14 @@ public class UI extends JFrame implements WorkCallback{
     }
 
     public synchronized static void start(App app) {
-        if(ui == null) {
+        if (ui == null) {
             init(app);
         }
         ui.setVisible(true);
     }
 
     private void doStart() {
-        if(Addit.isRunning()) {
+        if (Addit.isRunning()) {
             return;
         }
 
@@ -78,30 +79,31 @@ public class UI extends JFrame implements WorkCallback{
         for (String key : keys) {
             JTable jTable = tableHashMap.get(key);
             TableModel tableModel = jTable.getModel();
-            for (int i=0; i<tableModel.getRowCount(); ++i) {
-                if((boolean)tableModel.getValueAt(i, 0)) {
-                    if(!(Boolean)tableModel.getValueAt(i, 0)) {
+            for (int i = 0; i < tableModel.getRowCount(); ++i) {
+                if ((boolean) tableModel.getValueAt(i, 0)) {
+                    if (!(Boolean) tableModel.getValueAt(i, 0)) {
                         continue;
                     }
                     File file = new File(key, (String) tableModel.getValueAt(i, 1));
                     fileList.add(file);
-                    if(tableModel.getValueAt(i, 0) == null) {
+                    if (tableModel.getValueAt(i, 0) == null) {
                         continue;
                     }
                     TranslationLocator locator = new TranslationLocator();
                     workConfig.getTranslationLocatorMap().put(file.getAbsolutePath(), locator);
                     locator.setKeyLocator((String) tableModel.getValueAt(i, 2));
                     String ori = (String) tableModel.getValueAt(i, 3);
-                    if(ori != null) {
+                    if (ori != null) {
                         locator.setOrientation(GlobalConstant.Orientation.valueOf(ori.toUpperCase()).ordinal());
                     }
                     locator.setLocalLocator(Integer.valueOf(tableModel.getValueAt(i, 4).toString()));
                     locator.setTranslationLocator(Integer.valueOf(tableModel.getValueAt(i, 5).toString()));
+                    locator.setTranslationOfEnLocator(Integer.valueOf(tableModel.getValueAt(i, 6).toString()));
                 }
             }
         }
 
-        if(fileList.isEmpty()) {
+        if (fileList.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please add excel file.", "prompt", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
@@ -119,19 +121,19 @@ public class UI extends JFrame implements WorkCallback{
     }
 
     private void updateProgressBar(long complete, long total) {
-        if(total == 0) {
+        if (total == 0) {
             lbProgress.setText("");
             progressBar.setValue(0);
             return;
         }
         float percent = 100.0f * complete / total;
-        lbProgress.setText(String.format(complete+"/"+total+"  %.2f%%", percent));
+        lbProgress.setText(String.format(complete + "/" + total + "  %.2f%%", percent));
         progressBar.setValue((int) percent);
         progressBar.setToolTipText(String.format("%.2f%%", percent));
     }
 
     private static void init(App app) {
-        if(PID.isStartWithContain(GlobalConstant.NEED_HIDE_PRO)) {
+        if (PID.isStartWithContain(GlobalConstant.NEED_HIDE_PRO)) {
             WindowTool windowTool = WindowTool.getInstance();
             windowTool.setWindowText(windowTool.getCmdHwnd(), "translate tool cmd");
             windowTool.enableSystemMenu(WindowTool.SC_CLOSE, false);
@@ -140,6 +142,7 @@ public class UI extends JFrame implements WorkCallback{
 
         ui = new UI(app);
         ui.workConfig = AdditAssist.createWorkConfig(app.getAppConfig());
+        ui.workConfig.setAppConfig(app.getAppConfig());
         ui.addShutdownHandler();
         ui.initUI();
     }
@@ -236,9 +239,9 @@ public class UI extends JFrame implements WorkCallback{
             @Override
             public void windowClosing(WindowEvent e) {
 
-                if(JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(UI.this,
-                        "Are you sure to close?","prompt",JOptionPane.YES_NO_OPTION)) {
-                    if(Addit.isRunning()){
+                if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(UI.this,
+                        "Are you sure to close?", "prompt", JOptionPane.YES_NO_OPTION)) {
+                    if (Addit.isRunning()) {
                         JOptionPane.showMessageDialog(null, "Terminating now will cause the task to fail!\n" +
                                 "app will wait for the task to complete!", "alert", JOptionPane.WARNING_MESSAGE);
 
@@ -277,7 +280,7 @@ public class UI extends JFrame implements WorkCallback{
         ShutdownHandler.addShutdownHandler(new ShutdownHandler() {
             @Override
             public void run() {
-                if(Addit.isRunning()) {
+                if (Addit.isRunning()) {
                     WindowTool.getInstance().setCmdShow(true);
                     System.out.println("WARNING:Terminating now will cause the task to fail," +
                             "\napp will wait for the task to complete!");
@@ -285,14 +288,16 @@ public class UI extends JFrame implements WorkCallback{
                 while (Addit.isRunning()) {
                     try {
                         sleep(100);
-                    } catch (InterruptedException e) {}
+                    } catch (InterruptedException e) {
+                    }
                 }
-                if(exitStatus != 0) {
+                if (exitStatus != 0) {
                     WindowTool.getInstance().setCmdShow(true);
                     System.err.println("abnormal termination.");
                     try {
                         sleep(3000);
-                    } catch (InterruptedException e) {}
+                    } catch (InterruptedException e) {
+                    }
                 }
             }
         });
@@ -316,7 +321,7 @@ public class UI extends JFrame implements WorkCallback{
     public void onStart(WorkStage stage) {
         btnStart.setEnabled(false);
         btnStart.updateUI();
-        if(stage.getIndex() == 1) {
+        if (stage.getIndex() == 1) {
             System.out.println("start ..");
         }
         String stageInfo = String.format("\n%d/%d %s doWork\n",
@@ -340,12 +345,12 @@ public class UI extends JFrame implements WorkCallback{
                 stage.getIndex(),
                 stage.getCount(),
                 stage.getName(),
-                stage.isSuccess()?"finished." : "failed.");
+                stage.isSuccess() ? "finished." : "failed.");
         System.out.println(stageInfo);
         lbInfo.setText("");
         lbStage.setText(stageInfo);
         btnStart.setEnabled(true);
-        if(stage.getType() == Addit.WORK_TRANSLATION_TO_FILE) {
+        if (stage.getType() == Addit.WORK_TRANSLATION_TO_FILE) {
             outputTab.showFileListTable();
         }
         SwingUtilities.invokeLater(new Runnable() {
@@ -358,18 +363,20 @@ public class UI extends JFrame implements WorkCallback{
 
     @Override
     public boolean onError(Throwable t) {
-        if(t instanceof AlreadyExistKeyException) {
-            if(app.getAppConfig().isCoverKey()) {
-                return false;
-            }
+        if (t instanceof AlreadyExistKeyException) {
+            java.util.List<Translation> translationList = ((AlreadyExistKeyException) t).getExistList();
             try {
-                AdditAssist.saveKeyExistTranslation(((AlreadyExistKeyException) t).getExistList(),
-                        AdditAssist.createExistKeySaveFile(app.getAppConfig()));
+                File saveFile = AdditAssist.createExistKeySaveFile(app.getAppConfig());
+                AdditAssist.saveKeyExistTranslation(translationList, saveFile);
+                JOptionPane.showMessageDialog(ui, String.format("%d keys already exist and save in file %s",
+                        translationList.size(), saveFile.getAbsolutePath()),
+                        "some keys already exist", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
                 LoggerUtil.error(e.getMessage());
             }
+
             return true;
-        } else if(t instanceof NoFoundLocaleException) {
+        } else if (t instanceof NoFoundLocaleException) {
             tabbedPane.setSelectedIndex(1);
             unableHandleTab.update();
             JOptionPane.showMessageDialog(ui, t.getMessage(), "error", JOptionPane.ERROR_MESSAGE);
@@ -378,7 +385,7 @@ public class UI extends JFrame implements WorkCallback{
             LoggerUtil.exceptionLog(t);
             String msg = t.getMessage();
             if (msg == null) msg = "Unknown error.";
-            if(t instanceof InvalidExcelContentException) {
+            if (t instanceof InvalidExcelContentException) {
                 if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(ui,
                         msg + "\nDo you want to continue?", "warning", JOptionPane.YES_NO_OPTION,
                         JOptionPane.WARNING_MESSAGE)) {

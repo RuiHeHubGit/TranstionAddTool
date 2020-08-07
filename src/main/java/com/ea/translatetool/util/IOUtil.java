@@ -82,7 +82,7 @@ public class IOUtil {
             for (int i=0; i<lines.size(); ++i) {
                 bufferedWriter.write(lines.get(i));
                 if(i + 1 < lines.size()) {
-                    bufferedWriter.newLine();
+                    bufferedWriter.write("\n");
                 }
             }
         } catch (IOException e) {

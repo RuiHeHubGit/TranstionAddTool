@@ -10,6 +10,7 @@ public class Translation {
     private String localeKey;
     private String local;
     private String translation;
+    private String translationOfEn;
     private File file;
 
     public String getKey() {
@@ -42,6 +43,14 @@ public class Translation {
 
     public void setTranslation(String translation) {
         this.translation = translation;
+    }
+
+    public String getTranslationOfEn() {
+        return translationOfEn;
+    }
+
+    public void setTranslationOfEn(String translationOfEn) {
+        this.translationOfEn = translationOfEn;
     }
 
     public File getFile() {

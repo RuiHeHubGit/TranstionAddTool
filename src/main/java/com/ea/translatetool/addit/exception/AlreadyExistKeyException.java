@@ -4,7 +4,7 @@ import com.ea.translatetool.addit.mode.Translation;
 
 import java.util.List;
 
-public class AlreadyExistKeyException extends Exception{
+public class AlreadyExistKeyException extends RuntimeException {
     List<Translation> existList;
     public AlreadyExistKeyException(List<Translation> repeatList, String msg) {
         super(msg);

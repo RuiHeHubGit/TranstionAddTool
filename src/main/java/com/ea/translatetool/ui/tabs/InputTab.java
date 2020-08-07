@@ -122,7 +122,7 @@ public class InputTab extends JPanel implements ActionListener {
                 JPanel panel = new JPanel(panelLayout);
                 contentPanel.add(panel);
                 panel.add(new JLabel(" " + key));
-                jTable = new ZebraStripeJTable(new Object[][]{}, new Object[]{"", "File Name", "Key Locator", "Locale Translation Orientation", "Locale Locator", "Translation Locator"});
+                jTable = new ZebraStripeJTable(new Object[][]{}, new Object[]{"", "File Name", "Key Locator", "Translation Orientation", "Locale Locator", "Translation Locator", "English Translation Locator"});
                 jTable.setCheckBoxWidth(28);
                 jTable.setColumnToCheckBox(0, true);
                 jTable.setColumnToComboBox(3, new String[]{"horizontal","vertical"});
@@ -149,7 +149,7 @@ public class InputTab extends JPanel implements ActionListener {
 
             DefaultTableModel dataModel = (DefaultTableModel) jTable.getModel();
             dataModel.setRowCount(files.size());
-            dataModel.setColumnCount(6);
+            dataModel.setColumnCount(jTable.getColumnCount());
 
             for (int i=0; i<files.size(); ++i) {
                 File file = files.get(i);
@@ -178,6 +178,9 @@ public class InputTab extends JPanel implements ActionListener {
                     }
                     if (locator.getTranslationLocator() != null) {
                         dataModel.setValueAt(locator.getTranslationLocator(), i, 5);
+                    }
+                    if (locator.getTranslationOfEnLocator() != null) {
+                        dataModel.setValueAt(locator.getTranslationOfEnLocator(), i, 6);
                     }
                     jTable.setRowTextColor(i, Color.BLACK);
                 } else {

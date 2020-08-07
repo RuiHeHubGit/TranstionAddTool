@@ -4,7 +4,7 @@ import com.ea.translatetool.addit.mode.Translation;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class NoFoundLocaleException extends Exception{
+public class NoFoundLocaleException extends RuntimeException {
     private ConcurrentLinkedQueue<Translation> translations;
     public NoFoundLocaleException(ConcurrentLinkedQueue<Translation> translations, String msg) {
         super(msg);

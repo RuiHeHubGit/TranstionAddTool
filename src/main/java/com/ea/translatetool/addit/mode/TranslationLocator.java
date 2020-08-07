@@ -7,6 +7,7 @@ public class TranslationLocator {
     private String keyLocator;
     private Integer localLocator;
     private Integer translationLocator;
+    private Integer translationOfEnLocator;
     private Integer orientation;
 
 
@@ -32,6 +33,14 @@ public class TranslationLocator {
 
     public void setTranslationLocator(Integer translationLocator) {
         this.translationLocator = translationLocator;
+    }
+
+    public Integer getTranslationOfEnLocator() {
+        return translationOfEnLocator;
+    }
+
+    public void setTranslationOfEnLocator(Integer translationOfEnLocator) {
+        this.translationOfEnLocator = translationOfEnLocator;
     }
 
     public Integer getOrientation() {

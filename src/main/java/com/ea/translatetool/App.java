@@ -36,14 +36,21 @@ public class App {
 
     private void start(String[] args) {
         Locale.setDefault(Locale.ENGLISH);
-        if(needStartWithUI()) {
+        if(needStartWithUI(args)) {
             UI.start(this);
         } else {
             CmdMode.start(this, args);
         }
     }
 
-    private boolean needStartWithUI() {
+    private boolean needStartWithUI(String[] args) {
+        if(args.length > 0) {
+            for (String arg : args) {
+                if("-ui".equalsIgnoreCase(arg)) {
+                    return true;
+                }
+            }
+        }
         return PID.isStartWithContain(NEED_UI_START_PRO);
     }
 
